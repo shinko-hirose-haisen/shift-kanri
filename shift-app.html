@@ -204,7 +204,11 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
 <!-- BULK COLOR POPUP -->
 <div class="popup-overlay hidden" id="bulkPopupOverlay">
   <div class="popup-box" style="max-width:480px">
-    <div class="popup-title">📅 一括色変更</div>
+    <div class="popup-title">📅 一括変更</div>
+    <div style="display:flex;gap:4px;margin-bottom:12px">
+      <div class="tab active" id="bulkTabShip" onclick="switchBulkTab('ship')" style="font-size:11px;padding:4px 12px">船の色</div>
+      <div class="tab" id="bulkTabCrew" onclick="switchBulkTab('crew')" style="font-size:11px;padding:4px 12px">船員の乗船</div>
+    </div>
     <div id="bulkPopupBody">
       <div class="popup-label">対象の船</div>
       <div class="popup-options" style="gap:6px;margin-top:6px" id="bulkSlotOpts">
@@ -225,6 +229,30 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
       </div>
       <div class="popup-label">適用する色</div>
       <div class="color-swatches" id="bulkSwatches"></div>
+    </div>
+
+    <!-- 船員一括セクション -->
+    <div id="bulkCrewSection" class="hidden">
+      <div class="popup-label">対象の船員</div>
+      <div class="popup-options" style="gap:6px;margin-top:6px;flex-wrap:wrap" id="bulkCrewOpts"></div>
+      <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <div class="popup-label">開始日</div>
+          <input type="date" class="popup-textarea" id="bulkCrewStart" style="height:34px;resize:none">
+        </div>
+        <div style="flex:1;min-width:140px">
+          <div class="popup-label">終了日</div>
+          <input type="date" class="popup-textarea" id="bulkCrewEnd" style="height:34px;resize:none">
+        </div>
+      </div>
+      <div class="popup-label">乗船・勤怠</div>
+      <div class="popup-options" style="gap:6px;margin-top:6px" id="bulkCrewStatus">
+        <div class="popup-opt active" data-ship="" onclick="selBulkCrew(this)">未定</div>
+        <div class="popup-opt" data-ship="進広丸" onclick="selBulkCrew(this)">進広丸</div>
+        <div class="popup-opt" data-ship="第八進広丸" onclick="selBulkCrew(this)">第八進広丸</div>
+        <div class="popup-opt" data-ship="休" onclick="selBulkCrew(this)">休暇</div>
+      </div>
+    <div id="dummy_close_div">
     </div>
     <div class="popup-actions">
       <div></div>
@@ -553,12 +581,48 @@ const App={
       const style=c.bg?`background:${c.bg};border-color:${c.text||"#ccc"}`:`background:#f0f2f6;border-color:#ccc`;
       return `<div class="swatch${i===0?" active":""}" data-idx="${i}" style="${style}" title="${c.label}" onclick="selBulkColor(${i})"></div>`;
     }).join("");
+    // 船員チェックボックス生成
+    document.getElementById("bulkCrewOpts").innerHTML=CREW.map(c=>
+      `<div class="popup-opt" data-crew="${c}" onclick="toggleBulkCrew(this)">${c}</div>`
+    ).join("");
+    // 船員日付も同期
+    document.getElementById("bulkCrewStart").value=fmt(base);
+    document.getElementById("bulkCrewEnd").value=fmt(last);
     document.getElementById("bulkPopupOverlay").classList.remove("hidden");
   },
   closeBulkPopup(){
     document.getElementById("bulkPopupOverlay").classList.add("hidden");
   },
+  saveBulkCrew(){
+    const startVal=document.getElementById("bulkCrewStart").value;
+    const endVal=document.getElementById("bulkCrewEnd").value;
+    if(!startVal||!endVal){ showToast("開始日・終了日を入力してください"); return; }
+    const start=new Date(startVal), end=new Date(endVal);
+    if(start>end){ showToast("開始日が終了日より後になっています"); return; }
+    const crews=[...document.querySelectorAll("#bulkCrewOpts .popup-opt.active")].map(e=>e.dataset.crew);
+    if(crews.length===0){ showToast("対象の船員を選択してください"); return; }
+    const sel=document.querySelector("#bulkCrewStatus .popup-opt.active");
+    const ship=sel?.dataset.ship??"";
+    let count=0;
+    const cur=new Date(start);
+    while(cur<=end){
+      const m=mk(cur);
+      const dd=String(cur.getDate()).padStart(2,"0");
+      crews.forEach(name=>{
+        const existing=getCrew(m,name,dd);
+        setCrew(m,name,dd,{ship,note:existing.note||""});
+        count++;
+      });
+      cur.setDate(cur.getDate()+1);
+    }
+    this.closeBulkPopup();
+    renderAll();
+    schedSave();
+    showToast(`${crews.length}名 × ${count/crews.length}日を更新しました`);
+  },
   saveBulkColor(){
+    const activeTab=document.getElementById("bulkTabCrew")?.classList.contains("active");
+    if(activeTab){ this.saveBulkCrew(); return; }
     const startVal=document.getElementById("bulkStart").value;
     const endVal=document.getElementById("bulkEnd").value;
     if(!startVal||!endVal){ showToast("開始日・終了日を入力してください"); return; }
@@ -625,6 +689,18 @@ function selCrewShip(v){
 }
 
 
+function switchBulkTab(tab){
+  const isShip=(tab==="ship");
+  document.getElementById("bulkTabShip").classList.toggle("active",isShip);
+  document.getElementById("bulkTabCrew").classList.toggle("active",!isShip);
+  document.getElementById("bulkPopupBody").classList.toggle("hidden",!isShip);
+  document.getElementById("bulkCrewSection").classList.toggle("hidden",isShip);
+}
+function toggleBulkCrew(el){ el.classList.toggle("active"); }
+function selBulkCrew(el){
+  document.querySelectorAll("#bulkCrewStatus .popup-opt").forEach(e=>e.classList.remove("active"));
+  el.classList.add("active");
+}
 function toggleBulkSlot(el){
   el.classList.toggle("active");
 }
