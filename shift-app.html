@@ -361,9 +361,9 @@ let popupCtx    = null;
 
 
 // ======== DRAG SELECT ========
-// 方針：mousedown/mousemove/mouseupで管理。clickは使わない。
-// ドラッグ距離が3px未満なら「クリック」扱い→個別ポップアップ
-// 3px以上動いたら「ドラッグ」→一括ポップアップ
+// mousedown→mousemove→mouseupで管理
+// 移動量 < 5px → クリック（個別ポップアップ）
+// 移動量 >= 5px → ドラッグ（一括ポップアップ）
 const Drag = {
   active: false,
   isDrag: false,
@@ -375,29 +375,28 @@ const Drag = {
 
   start(e, el){
     if(!isEditor || e.button!==0) return;
+    // ポップアップが開いている間は無視
+    if(!document.getElementById("popupOverlay").classList.contains("hidden")) return;
+    if(!document.getElementById("dragPopupOverlay").classList.contains("hidden")) return;
     this.active=true; this.isDrag=false;
     this.startX=e.clientX; this.startY=e.clientY;
     this.startCell=el; this.type=el.dataset.type;
     this.selected=[]; this._clearHighlight();
-    // preventDefault しない（テキスト選択だけ防ぐ）
-    e.preventDefault();
+    // テキスト選択を防ぐだけ、clickはそのまま発火させる
   },
 
   over(e){
     if(!this.active) return;
     const dx=Math.abs(e.clientX-this.startX), dy=Math.abs(e.clientY-this.startY);
-    if(dx<4 && dy<4) return; // まだクリック範囲内
+    if(dx<5 && dy<5) return;
     this.isDrag=true;
     const el=document.elementFromPoint(e.clientX, e.clientY);
     const cell=el ? el.closest("[data-type]") : null;
     if(!cell || cell.dataset.type!==this.type) return;
-
     if(this.type==="ship"){
-      // 船：同じslot行のみ横方向
       if(cell.dataset.slot!==this.startCell.dataset.slot) return;
       this._buildShipRange(cell);
     } else {
-      // 船員：行またぎOK・同じテーブル内の開始名〜現在名 × 開始日〜現在日
       this._buildCrewRange(cell);
     }
     this._updateBadge();
@@ -407,18 +406,16 @@ const Drag = {
     if(!this.active) return;
     this.active=false;
     this._removeBadge();
-
-    if(!this.isDrag){
-      // クリック：個別ポップアップ
+    if(this.isDrag && this.selected.length > 1){
+      App.openDragPopup(this.selected, this.type);
+    } else {
+      // ドラッグしていない or 1セルだけ → クリックとして扱う
+      // clickイベントでopenShipPopup/openCrewPopupが呼ばれる
       this._clearHighlight();
       this.selected=[];
-      const el=this.startCell;
-      if(this.type==="ship") App.openShipPopup(el.dataset.m, el.dataset.slot, el.dataset.d, el.dataset.label);
-      else App.openCrewPopup(el.dataset.m, el.dataset.name, el.dataset.d, el.dataset.label);
-    } else if(this.selected.length > 0){
-      // ドラッグ：一括ポップアップ
-      App.openDragPopup(this.selected, this.type);
     }
+    // isDragはonclickで参照後にリセット（mouseupの後にclickが来るため）
+    setTimeout(()=>{ this.isDrag=false; }, 50);
   },
 
   _buildShipRange(endCell){
@@ -589,7 +586,7 @@ function renderMonth(md){
       const cls=dc(dow);
       const bgStyle=val.color?`background:${val.color};`:"";
       const ed=isEditor
-        ?`class="cell-ship ${cls} editable" data-type="ship" data-m="${m}" data-slot="${slot}" data-d="${dd(d)}" data-label="${label} ${y}/${mo+1}/${d}" style="${bgStyle}" onmousedown="Drag.start(event,this)"`
+        ?`class="cell-ship ${cls} editable" data-type="ship" data-m="${m}" data-slot="${slot}" data-d="${dd(d)}" data-label="${label} ${y}/${mo+1}/${d}" style="${bgStyle}" onmousedown="Drag.start(event,this)" onclick="if(!Drag.isDrag)App.openShipPopup('${m}','${slot}','${dd(d)}','${label} ${y}/${mo+1}/${d}')"`
         :`class="cell-ship ${cls}" style="${bgStyle}"`;
       h+=`<td ${ed}><div class="cell-content">${esc(val.text||"")}</div></td>`;
     });
@@ -613,7 +610,7 @@ function renderMonth(md){
       else if(ship) badge=`<span class="badge-ship" style="background:${col.bg};color:${col.text};border-color:${col.border}">${esc(ship)}</span>`;
       else if(val.note) badge=`<span style="font-size:10px;color:#6b7fa0">${esc(val.note)}</span>`;
       const ed=isEditor
-        ?`class="cell-crew ${cls} editable" data-type="crew" data-m="${m}" data-name="${name}" data-d="${dd(d)}" data-label="${y}/${mo+1}/${d} ${name}" style="${bgStyle}" onmousedown="Drag.start(event,this)"`
+        ?`class="cell-crew ${cls} editable" data-type="crew" data-m="${m}" data-name="${name}" data-d="${dd(d)}" data-label="${y}/${mo+1}/${d} ${name}" style="${bgStyle}" onmousedown="Drag.start(event,this)" onclick="if(!Drag.isDrag)App.openCrewPopup('${m}','${name}','${dd(d)}','${y}/${mo+1}/${d} ${name}')"`
         :`class="cell-crew ${cls}" style="${bgStyle}"`;
       h+=`<td ${ed}><div class="cell-crew-inner">${badge}</div></td>`;
     });
