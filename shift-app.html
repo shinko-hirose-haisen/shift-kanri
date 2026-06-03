@@ -44,12 +44,17 @@ header{background:var(--hbg);padding:10px 20px;display:flex;align-items:center;j
 .sdot.saving{background:#f0a500;animation:pulse 0.8s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .main{padding:16px 20px;}
-.stable-wrap{overflow-x:scroll;background:#fff;border-radius:8px;border:1px solid var(--border);margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);}
-/* スクロールバーを常時表示 */
-.stable-wrap::-webkit-scrollbar{height:10px;}
-.stable-wrap::-webkit-scrollbar-track{background:#f0f2f6;border-radius:0 0 8px 8px;}
-.stable-wrap::-webkit-scrollbar-thumb{background:#b0bcd4;border-radius:5px;}
-.stable-wrap::-webkit-scrollbar-thumb:hover{background:#7e94b8;}
+.stable-wrap-outer{margin-bottom:20px;position:relative;}
+.stable-wrap{overflow-x:scroll;background:#fff;border-radius:8px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,0.07);}
+/* 固定スクロールバー */
+.fixed-scroll{position:fixed;bottom:0;left:0;right:0;height:14px;overflow-x:scroll;overflow-y:hidden;z-index:90;background:#e8ecf4;border-top:1px solid var(--border);}
+.fixed-scroll-inner{height:1px;}
+/* スクロールバー非表示（固定バーで代替） */
+.stable-wrap::-webkit-scrollbar{height:0;}
+.fixed-scroll::-webkit-scrollbar{height:14px;}
+.fixed-scroll::-webkit-scrollbar-track{background:#e8ecf4;}
+.fixed-scroll::-webkit-scrollbar-thumb{background:#b0bcd4;border-radius:5px;}
+.fixed-scroll::-webkit-scrollbar-thumb:hover{background:#7e94b8;}
 .top-scroll-wrap::-webkit-scrollbar{height:10px;}
 .top-scroll-wrap::-webkit-scrollbar-track{background:#f0f2f6;}
 .top-scroll-wrap::-webkit-scrollbar-thumb{background:#b0bcd4;border-radius:5px;}
@@ -165,6 +170,8 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
   </div>
   <div class="main" id="mc"><div class="loading"><div class="spinner"></div><span>読み込み中...</span></div></div>
 </div>
+  <!-- 固定スクロールバー -->
+  <div class="fixed-scroll" id="fixedScroll"><div class="fixed-scroll-inner" id="fixedScrollInner"></div></div>
   <div style="text-align:center;padding:10px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);margin-top:4px">
     社船 作業・休暇予定表 <span id="versionLbl" style="font-weight:700;color:var(--text2)"></span>
 
@@ -278,7 +285,7 @@ async function mkV(){return b64u(crypto.getRandomValues(new Uint8Array(32)));}
 async function mkC(v){return b64u(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));}
 
 // ===== VERSION =====
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.3.0';
 
 // ===== CONSTANTS =====
 const SHIPS=["進広丸","第八進広丸"];
@@ -395,6 +402,7 @@ function renderAll(){
     :`${n.getFullYear()}年 ${n.getMonth()+1}月`;
   document.getElementById("mc").innerHTML=getMonths().map(renderMonth).join("");
   const vl=document.getElementById("versionLbl");if(vl)vl.textContent=VERSION;
+  setTimeout(syncScrollBars,100);
   setTimeout(setupTopScrollbars,50);
 }
 function renderMonth(md){
@@ -405,7 +413,7 @@ function renderMonth(md){
 
   let h=`<div style="margin-bottom:24px">
   <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:6px"><span>📅</span>${y}年 ${mo+1}月</div>
-  <div class="stable-wrap"><table><thead><tr>
+  <div class="stable-wrap-outer"><div class="stable-wrap" id="sw_${m}"><table><thead><tr>
   <th class="th-lbl">日付</th>
   ${days.map(({d,dow})=>`<th class="th-d ${dc(dow)}"${todayMark(d)?' style="outline:2px solid #f0a500;outline-offset:-2px"':''}><div class="dn">${d}</div><div class="dw">${DOW[dow]}</div></th>`).join("")}
   </tr></thead><tbody>`;
@@ -808,6 +816,51 @@ const App={
     }
   },
 };
+
+// 固定スクロールバーの制御
+let fixedTarget=null; // 現在画面に見えているstable-wrap
+
+function syncScrollBars(){
+  const fixedBar=document.getElementById("fixedScroll");
+  const fixedInner=document.getElementById("fixedScrollInner");
+  if(!fixedBar||!fixedInner) return;
+
+  // 画面内で最も大きく見えているテーブルを対象にする
+  function updateTarget(){
+    let best=null, bestArea=0;
+    document.querySelectorAll(".stable-wrap").forEach(sw=>{
+      const r=sw.getBoundingClientRect();
+      const visible=Math.max(0,Math.min(r.bottom,window.innerHeight)-Math.max(r.top,0));
+      if(visible>bestArea){bestArea=visible;best=sw;}
+    });
+    if(best && best!==fixedTarget){
+      // 前のターゲットのスクロールイベントを解除
+      if(fixedTarget) fixedTarget._fixedListener && fixedTarget.removeEventListener("scroll",fixedTarget._fixedListener);
+      fixedTarget=best;
+      // 幅を同期
+      fixedInner.style.width=best.scrollWidth+"px";
+      fixedBar.scrollLeft=best.scrollLeft;
+      // テーブルスクロール→固定バー同期
+      fixedTarget._fixedListener=()=>{ fixedBar.scrollLeft=fixedTarget.scrollLeft; };
+      fixedTarget.addEventListener("scroll",fixedTarget._fixedListener);
+    }
+    // 見えているテーブルがなければ固定バーを隠す
+    fixedBar.style.display=bestArea>20?"":"none";
+  }
+
+  // 固定バー→テーブル同期
+  fixedBar.addEventListener("scroll",()=>{ if(fixedTarget) fixedTarget.scrollLeft=fixedBar.scrollLeft; });
+
+  // スクロール・リサイズで更新
+  window.addEventListener("scroll",updateTarget,{passive:true});
+  window.addEventListener("resize",updateTarget);
+  new ResizeObserver(()=>{
+    if(fixedTarget) fixedInner.style.width=fixedTarget.scrollWidth+"px";
+    updateTarget();
+  }).observe(document.getElementById("mc"));
+
+  updateTarget();
+}
 
 function toast(msg){const t=document.createElement("div");t.className="toast";t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
 
