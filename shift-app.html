@@ -137,7 +137,7 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
       <svg width="14" height="14" viewBox="0 0 21 21" fill="currentColor"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
       Microsoftアカウントでログイン
     </button>
-    <div style="font-size:11px;color:var(--text3);margin-top:10px">OneDriveにデータを保存します</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:10px">データはクラウドに保存されます</div>
   </div>
 </div>
 
@@ -166,6 +166,7 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
       <div class="tab" id="tabA" onclick="App.sv(0)">両月</div>
     </div>
     <button class="btn btn-g hidden" id="bulkBtn" onclick="App.openBulk()" style="font-size:11px">🎨 一括変更</button>
+    <button class="btn btn-g hidden" id="settingsBtn" onclick="App.openSettings()" style="font-size:11px">⚙ 設定</button>
     <div class="sstat"><div class="sdot" id="sdot"></div><span id="slbl">保存済み</span></div>
   </div>
   <div class="main" id="mc"><div class="loading"><div class="spinner"></div><span>読み込み中...</span></div></div>
@@ -174,6 +175,7 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
   <div class="fixed-scroll" id="fixedScroll"><div class="fixed-scroll-inner" id="fixedScrollInner"></div></div>
   <div style="text-align:center;padding:10px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);margin-top:4px">
     社船 作業・休暇予定表 <span id="versionLbl" style="font-weight:700;color:var(--text2)"></span>
+  </div>
 
 <!-- 個別編集ポップアップ(船) -->
 <div class="overlay hidden" id="shipPop">
@@ -269,6 +271,42 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
   </div>
 </div>
 
+<!-- 設定ポップアップ -->
+<div class="overlay hidden" id="settingsPop">
+  <div class="pbox" style="max-width:520px;max-height:85vh;overflow-y:auto">
+    <div class="ptitle">⚙ マスタ設定</div>
+    <div class="bulk-tabs">
+      <div class="btab active" id="stab1" onclick="App.switchStab(1)">船員</div>
+      <div class="btab" id="stab2" onclick="App.switchStab(2)">船</div>
+    </div>
+    <!-- 船員タブ -->
+    <div id="stabCrew">
+      <div class="plbl">船員リスト（ドラッグで並び替え）</div>
+      <div id="crewList" style="margin-top:6px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input type="text" class="ptxt" id="newCrewName" style="height:34px;flex:1" placeholder="新しい船員名">
+        <button class="btn btn-p" onclick="App.addCrew()" style="white-space:nowrap">追加</button>
+      </div>
+    </div>
+    <!-- 船タブ -->
+    <div id="stabShip" class="hidden">
+      <div class="plbl">船リスト（ドラッグで並び替え）</div>
+      <div id="shipList" style="margin-top:6px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input type="text" class="ptxt" id="newShipName" style="height:34px;flex:1" placeholder="新しい船名">
+        <button class="btn btn-p" onclick="App.addShip()" style="white-space:nowrap">追加</button>
+      </div>
+      <div style="font-size:11px;color:#e53935;margin-top:8px">※船を削除するとその船のデータも削除されます</div>
+    </div>
+    <div class="pacts">
+      <div></div>
+      <div class="pacts-r">
+        <button class="btn btn-g" onclick="App.closeSettings()">キャンセル</button>
+        <button class="btn btn-s" onclick="App.saveSettingsAndClose()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 // ===== CONFIG =====
 const CLIENT_ID   = "31411124-c9a3-4c1a-b357-343c1650b98c";
@@ -285,16 +323,33 @@ async function mkV(){return b64u(crypto.getRandomValues(new Uint8Array(32)));}
 async function mkC(v){return b64u(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));}
 
 // ===== VERSION =====
-const VERSION = 'v1.3.0';
+const VERSION = 'v1.5.0';
 
-// ===== CONSTANTS =====
-const SHIPS=["進広丸","第八進広丸"];
-const SLOTS=["進広丸_1","進広丸_2","第八進広丸_1","第八進広丸_2"];
-const SLBL={"進広丸_1":"進広丸 ①","進広丸_2":"進広丸 ②","第八進広丸_1":"第八進広丸 ①","第八進広丸_2":"第八進広丸 ②"};
-const S1ST=new Set(["進広丸_1","第八進広丸_1"]);
-const CREW=["松下","松田","池上","川辺","緒方","川本","古川","迫田","髙戸(誠)","丸山","山本"];
+// ===== CONSTANTS (動的) =====
 const DOW=["日","月","火","水","木","金","土"];
-const SCOL={"進広丸":{bg:"#dbeafe",bd:"#3b82f6",tx:"#1d4ed8"},"第八進広丸":{bg:"#dcfce7",bd:"#22c55e",tx:"#15803d"}};
+// 船色パレット（船番号順に使用）
+const SHIP_COLOR_PALETTE=[
+  {bg:"#dbeafe",bd:"#3b82f6",tx:"#1d4ed8"},
+  {bg:"#dcfce7",bd:"#22c55e",tx:"#15803d"},
+  {bg:"#fef9c3",bd:"#ca8a04",tx:"#854d0e"},
+  {bg:"#fce7f3",bd:"#db2777",tx:"#9d174d"},
+];
+// デフォルト設定
+const DEFAULT_SHIPS=["進広丸","第八進広丸"];
+const DEFAULT_CREW=["松下","松田","池上","川辺","緒方","川本","古川","迫田","髙戸(誠)","丸山","山本"];
+// 動的変数（設定から上書き）
+let SHIPS=[...DEFAULT_SHIPS];
+let CREW=[...DEFAULT_CREW];
+// SHIPS/CREWから導出
+function rebuildDerived(){
+  window.SLOTS=SHIPS.flatMap(s=>[s+"_1",s+"_2"]);
+  window.SLBL={};
+  SHIPS.forEach(s=>{SLBL[s+"_1"]=s+" ①";SLBL[s+"_2"]=s+" ②";});
+  window.S1ST=new Set(SHIPS.map(s=>s+"_1"));
+  window.SCOL={};
+  SHIPS.forEach((s,i)=>{SCOL[s]=SHIP_COLOR_PALETTE[i%SHIP_COLOR_PALETTE.length];});
+}
+rebuildDerived();
 const CCOLS=[
   {l:"なし",bg:"",tx:""},
   {l:"青",bg:"#bfdbfe",tx:"#1e40af"},
@@ -352,6 +407,22 @@ async function loadData(){
     if(r.ok){const j=await r.json();appData=j[0]?.data||{};}
     else appData={};
   }catch(e){appData={};}
+  // 設定を適用
+  applySettings();
+}
+function applySettings(){
+  const cfg=appData._config||{};
+  if(cfg.ships&&cfg.ships.length>0) SHIPS=cfg.ships;
+  else SHIPS=[...DEFAULT_SHIPS];
+  if(cfg.crew&&cfg.crew.length>0) CREW=cfg.crew;
+  else CREW=[...DEFAULT_CREW];
+  rebuildDerived();
+}
+function saveSettings(){
+  if(!appData._config) appData._config={};
+  appData._config.ships=SHIPS;
+  appData._config.crew=CREW;
+  sched();
 }
 async function saveData(){
   setSS("saving");
@@ -403,7 +474,6 @@ function renderAll(){
   document.getElementById("mc").innerHTML=getMonths().map(renderMonth).join("");
   const vl=document.getElementById("versionLbl");if(vl)vl.textContent=VERSION;
   setTimeout(syncScrollBars,100);
-  setTimeout(setupTopScrollbars,50);
 }
 function renderMonth(md){
   const y=md.getFullYear(),mo=md.getMonth(),m=mkey(md);
@@ -713,14 +783,99 @@ const App={
       const cell=e.target.closest("[data-type]");
       if(cell) onCellMD(e,cell);
     });
-    // テーブル上部にスクロールバーを同期
-    setupTopScrollbars();
+
   },
   updateUI(){
     const dot=document.getElementById("adot"),lbl=document.getElementById("albl");
     const lb=document.getElementById("loginBtn"),lo=document.getElementById("logoutBtn"),bb=document.getElementById("bulkBtn");
-    if(isEd){dot.className="adot on";lbl.textContent="編集モード";lb.classList.add("hidden");lo.classList.remove("hidden");bb.classList.remove("hidden");}
-    else{dot.className="adot";lbl.textContent="閲覧モード";lb.classList.remove("hidden");lo.classList.add("hidden");bb.classList.add("hidden");}
+    const sb=document.getElementById("settingsBtn");
+    if(isEd){dot.className="adot on";lbl.textContent="編集モード";lb.classList.add("hidden");lo.classList.remove("hidden");bb.classList.remove("hidden");sb?.classList.remove("hidden");}
+    else{dot.className="adot";lbl.textContent="閲覧モード";lb.classList.remove("hidden");lo.classList.add("hidden");bb.classList.add("hidden");document.getElementById("settingsBtn")?.classList.add("hidden");}
+  },
+
+  // 設定
+  openSettings(){
+    this._editShips=[...SHIPS];
+    this._editCrew=[...CREW];
+    this.renderCrewList();
+    this.renderShipList();
+    document.getElementById("settingsPop").classList.remove("hidden");
+  },
+  closeSettings(){document.getElementById("settingsPop").classList.add("hidden");},
+  switchStab(n){
+    document.getElementById("stab1").classList.toggle("active",n===1);
+    document.getElementById("stab2").classList.toggle("active",n===2);
+    document.getElementById("stabCrew").classList.toggle("hidden",n!==1);
+    document.getElementById("stabShip").classList.toggle("hidden",n!==2);
+  },
+  renderCrewList(){
+    const el=document.getElementById("crewList");
+    el.innerHTML=this._editCrew.map((c,i)=>`
+      <div class="settings-row" draggable="true" data-idx="${i}" data-type="crew"
+        ondragstart="App.dragStart(event)" ondragover="App.dragOver(event,'crew')" ondrop="App.dropItem(event,'crew')"
+        style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#f8f9fb;border:1px solid var(--border);border-radius:6px;margin-bottom:4px">
+        <span style="cursor:grab;color:var(--text3);font-size:14px">☰</span>
+        <span style="flex:1;font-size:12px">${esc(c)}</span>
+        <button onclick="App.removeCrew(${i})" style="background:none;border:none;cursor:pointer;color:#e53935;font-size:14px;padding:0 4px">✕</button>
+      </div>`).join("");
+  },
+  renderShipList(){
+    const el=document.getElementById("shipList");
+    el.innerHTML=this._editShips.map((s,i)=>`
+      <div class="settings-row" draggable="true" data-idx="${i}" data-type="ship"
+        ondragstart="App.dragStart(event)" ondragover="App.dragOver(event,'ship')" ondrop="App.dropItem(event,'ship')"
+        style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#f8f9fb;border:1px solid var(--border);border-radius:6px;margin-bottom:4px">
+        <span style="cursor:grab;color:var(--text3);font-size:14px">☰</span>
+        <input type="text" value="${esc(s)}" data-sidx="${i}" onchange="App.renameShip(${i},this.value)"
+          style="flex:1;border:none;background:transparent;font-size:12px;outline:none;font-family:var(--font)">
+        <button onclick="App.removeShip(${i})" style="background:none;border:none;cursor:pointer;color:#e53935;font-size:14px;padding:0 4px">✕</button>
+      </div>`).join("");
+  },
+  addCrew(){
+    const inp=document.getElementById("newCrewName");
+    const name=inp.value.trim();
+    if(!name){toast("名前を入力してください");return;}
+    if(this._editCrew.includes(name)){toast("同じ名前がすでにあります");return;}
+    this._editCrew.push(name); inp.value=""; this.renderCrewList();
+  },
+  removeCrew(i){ this._editCrew.splice(i,1); this.renderCrewList(); },
+  addShip(){
+    const inp=document.getElementById("newShipName");
+    const name=inp.value.trim();
+    if(!name){toast("船名を入力してください");return;}
+    if(this._editShips.includes(name)){toast("同じ船名がすでにあります");return;}
+    this._editShips.push(name); inp.value=""; this.renderShipList();
+  },
+  removeShip(i){ this._editShips.splice(i,1); this.renderShipList(); },
+  renameShip(i,val){ this._editShips[i]=val.trim(); },
+  // ドラッグ並び替え
+  _dragIdx:null,
+  dragStart(e){ this._dragIdx=parseInt(e.currentTarget.dataset.idx); e.dataTransfer.effectAllowed="move"; },
+  dragOver(e,type){ e.preventDefault(); e.dataTransfer.dropEffect="move"; },
+  dropItem(e,type){
+    e.preventDefault();
+    const toIdx=parseInt(e.currentTarget.dataset.idx);
+    if(this._dragIdx===null||this._dragIdx===toIdx) return;
+    const arr=type==="crew"?this._editCrew:this._editShips;
+    const item=arr.splice(this._dragIdx,1)[0];
+    arr.splice(toIdx,0,item);
+    this._dragIdx=null;
+    if(type==="crew") this.renderCrewList();
+    else this.renderShipList();
+  },
+  saveSettingsAndClose(){
+    // 船名の変更を反映
+    document.querySelectorAll("#shipList input[data-sidx]").forEach(inp=>{
+      const i=parseInt(inp.dataset.sidx);
+      if(i<this._editShips.length) this._editShips[i]=inp.value.trim();
+    });
+    SHIPS=this._editShips.filter(s=>s);
+    CREW=this._editCrew.filter(c=>c);
+    rebuildDerived();
+    saveSettings();
+    this.closeSettings();
+    renderAll();
+    toast("設定を保存しました");
   },
   pm(){curDate=new Date(curDate.getFullYear(),curDate.getMonth()-1,1);renderAll();},
   nm(){curDate=new Date(curDate.getFullYear(),curDate.getMonth()+1,1);renderAll();},
@@ -869,12 +1024,13 @@ document.addEventListener("mousemove",onDocMM);
 document.addEventListener("mouseup",onDocMU);
 
 // ポップアップのオーバーレイクリックで閉じる
-["shipPop","crewPop","dragPop","bulkPop"].forEach(id=>{
+["shipPop","crewPop","dragPop","bulkPop","settingsPop"].forEach(id=>{
   document.getElementById(id).addEventListener("click",function(e){
     if(e.target===this){
       if(id==="shipPop") App.closeShip();
       else if(id==="crewPop") App.closeCrew();
       else if(id==="dragPop") App.closeDrag();
+      else if(id==="settingsPop") App.closeSettings();
       else App.closeBulk();
     }
   });
