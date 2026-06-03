@@ -44,12 +44,16 @@ header{background:var(--hbg);padding:10px 20px;display:flex;align-items:center;j
 .sdot.saving{background:#f0a500;animation:pulse 0.8s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .main{padding:16px 20px;}
-.stable-wrap{overflow-x:auto;background:#fff;border-radius:8px;border:1px solid var(--border);margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);}
+.stable-wrap{overflow-x:scroll;background:#fff;border-radius:8px;border:1px solid var(--border);margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);}
 /* スクロールバーを常時表示 */
 .stable-wrap::-webkit-scrollbar{height:10px;}
 .stable-wrap::-webkit-scrollbar-track{background:#f0f2f6;border-radius:0 0 8px 8px;}
 .stable-wrap::-webkit-scrollbar-thumb{background:#b0bcd4;border-radius:5px;}
 .stable-wrap::-webkit-scrollbar-thumb:hover{background:#7e94b8;}
+.top-scroll-wrap::-webkit-scrollbar{height:10px;}
+.top-scroll-wrap::-webkit-scrollbar-track{background:#f0f2f6;}
+.top-scroll-wrap::-webkit-scrollbar-thumb{background:#b0bcd4;border-radius:5px;}
+.top-scroll-wrap::-webkit-scrollbar-thumb:hover{background:#7e94b8;}
 table{border-collapse:collapse;min-width:100%;}
 th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
 .th-lbl{background:#f0f2f6;padding:7px 10px;font-size:11px;font-weight:700;color:var(--text2);white-space:nowrap;min-width:90px;text-align:center;position:sticky;left:0;z-index:10;border-right:2px solid var(--primary);}
@@ -274,7 +278,7 @@ async function mkV(){return b64u(crypto.getRandomValues(new Uint8Array(32)));}
 async function mkC(v){return b64u(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));}
 
 // ===== VERSION =====
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 
 // ===== CONSTANTS =====
 const SHIPS=["進広丸","第八進広丸"];
@@ -391,6 +395,7 @@ function renderAll(){
     :`${n.getFullYear()}年 ${n.getMonth()+1}月`;
   document.getElementById("mc").innerHTML=getMonths().map(renderMonth).join("");
   const vl=document.getElementById("versionLbl");if(vl)vl.textContent=VERSION;
+  setTimeout(setupTopScrollbars,50);
 }
 function renderMonth(md){
   const y=md.getFullYear(),mo=md.getMonth(),m=mkey(md);
@@ -447,6 +452,29 @@ function renderMonth(md){
 
   h+=`</tbody></table></div></div>`;
   return h;
+}
+
+
+// ===== TOP SCROLLBAR =====
+function setupTopScrollbars(){
+  // 既存のtop-scrollを削除
+  document.querySelectorAll(".top-scroll-wrap").forEach(e=>e.remove());
+  document.querySelectorAll(".stable-wrap").forEach(wrap=>{
+    const top=document.createElement("div");
+    top.className="top-scroll-wrap";
+    top.style.cssText="overflow-x:auto;overflow-y:hidden;height:12px;";
+    const inner=document.createElement("div");
+    inner.style.height="1px";
+    top.appendChild(inner);
+    wrap.parentNode.insertBefore(top,wrap);
+    // 幅を同期
+    const syncWidth=()=>{ inner.style.width=wrap.scrollWidth+"px"; };
+    syncWidth();
+    new ResizeObserver(syncWidth).observe(wrap);
+    // スクロール同期
+    top.addEventListener("scroll",()=>{ wrap.scrollLeft=top.scrollLeft; });
+    wrap.addEventListener("scroll",()=>{ top.scrollLeft=wrap.scrollLeft; });
+  });
 }
 
 // ===== SWATCHES HTML =====
@@ -672,12 +700,13 @@ const App={
     this.bindEvents();
   },
   bindEvents(){
-    // セルのmousedownをdocumentではなくmainコンテナに委譲
     const mc=document.getElementById("mc");
     mc.addEventListener("mousedown",e=>{
       const cell=e.target.closest("[data-type]");
       if(cell) onCellMD(e,cell);
     });
+    // テーブル上部にスクロールバーを同期
+    setupTopScrollbars();
   },
   updateUI(){
     const dot=document.getElementById("adot"),lbl=document.getElementById("albl");
