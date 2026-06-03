@@ -361,127 +361,138 @@ let popupCtx    = null;
 
 
 // ======== DRAG SELECT ========
+// 方針：mousedown/mousemove/mouseupで管理。clickは使わない。
+// ドラッグ距離が3px未満なら「クリック」扱い→個別ポップアップ
+// 3px以上動いたら「ドラッグ」→一括ポップアップ
 const Drag = {
-  dragging: false,
-  moved: false,
+  active: false,
+  isDrag: false,
+  startX: 0, startY: 0,
   startCell: null,
-  selected: [],    // [{type,m,slot,name,d,el}]
-  type: null,      // "ship" or "crew"
+  selected: [],
+  type: null,
   badge: null,
 
   start(e, el){
-    if(e.button!==0) return;
-    this.dragging=true; this.moved=false;
-    this.startCell=el; this.selected=[]; this.type=el.dataset.type;
-    this._addCell(el);
-    this._updateBadge();
+    if(!isEditor || e.button!==0) return;
+    this.active=true; this.isDrag=false;
+    this.startX=e.clientX; this.startY=e.clientY;
+    this.startCell=el; this.type=el.dataset.type;
+    this.selected=[]; this._clearHighlight();
+    // preventDefault しない（テキスト選択だけ防ぐ）
     e.preventDefault();
   },
 
-  click(e, el, type){
-    if(this.moved){
-      // ドラッグ終了後のclickは無視
-      this.moved=false;
-      return;
-    }
-    // 通常クリック→個別ポップアップ
-    this.selected=[]; this._clearHighlight();
-    if(type==="ship") App.openShipPopup(el.dataset.m, el.dataset.slot, el.dataset.d, el.dataset.label);
-    else App.openCrewPopup(el.dataset.m, el.dataset.name, el.dataset.d, el.dataset.label);
-  },
-
   over(e){
-    if(!this.dragging) return;
-    const el=e.target.closest ? e.target.closest("[data-type]") : null;
-    if(!el||el.dataset.type!==this.type) return;
-    this.moved=true;
+    if(!this.active) return;
+    const dx=Math.abs(e.clientX-this.startX), dy=Math.abs(e.clientY-this.startY);
+    if(dx<4 && dy<4) return; // まだクリック範囲内
+    this.isDrag=true;
+    const el=document.elementFromPoint(e.clientX, e.clientY);
+    const cell=el ? el.closest("[data-type]") : null;
+    if(!cell || cell.dataset.type!==this.type) return;
+
     if(this.type==="ship"){
-      // 船：同じslot行内のみ
-      if(el.dataset.slot!==this.startCell.dataset.slot) return;
-      this._buildRange(this.startCell, el);
+      // 船：同じslot行のみ横方向
+      if(cell.dataset.slot!==this.startCell.dataset.slot) return;
+      this._buildShipRange(cell);
     } else {
-      // 船員：行またぎOK（同じ月テーブル内の全crew行×日付範囲）
-      this._buildCrewRange(this.startCell, el);
+      // 船員：行またぎOK・同じテーブル内の開始名〜現在名 × 開始日〜現在日
+      this._buildCrewRange(cell);
     }
     this._updateBadge();
   },
 
   end(e){
-    if(!this.dragging) return;
-    this.dragging=false;
+    if(!this.active) return;
+    this.active=false;
     this._removeBadge();
-    if(this.moved && this.selected.length>1){
+
+    if(!this.isDrag){
+      // クリック：個別ポップアップ
+      this._clearHighlight();
+      this.selected=[];
+      const el=this.startCell;
+      if(this.type==="ship") App.openShipPopup(el.dataset.m, el.dataset.slot, el.dataset.d, el.dataset.label);
+      else App.openCrewPopup(el.dataset.m, el.dataset.name, el.dataset.d, el.dataset.label);
+    } else if(this.selected.length > 0){
+      // ドラッグ：一括ポップアップ
       App.openDragPopup(this.selected, this.type);
-    } else if(!this.moved){
-      // クリックのみ→movedはclickハンドラで処理
-    }
-    // movedはclick側でリセット（clickがfireする前にendが来るため）
-  },
-
-  _addCell(el){
-    const key=el.dataset.m+el.dataset.d+(el.dataset.slot||el.dataset.name);
-    if(!this.selected.find(s=>s.key===key)){
-      el.classList.add("drag-selected");
-      const obj={key,el,m:el.dataset.m,d:el.dataset.d};
-      if(this.type==="ship") obj.slot=el.dataset.slot;
-      else obj.name=el.dataset.name;
-      this.selected.push(obj);
     }
   },
 
-  _buildRange(startEl, endEl){
-    const row=startEl.closest("tr");
+  _buildShipRange(endCell){
+    const row=this.startCell.closest("tr");
     if(!row) return;
-    const cells=[...row.querySelectorAll("[data-type]")];
-    const si=cells.indexOf(startEl), ei=cells.indexOf(endEl);
+    const cells=[...row.querySelectorAll("[data-type='ship']")];
+    const si=cells.indexOf(this.startCell), ei=cells.indexOf(endCell);
     if(si<0||ei<0) return;
     const from=Math.min(si,ei), to=Math.max(si,ei);
     this._clearHighlight(); this.selected=[];
-    cells.slice(from,to+1).forEach(c=>this._addCell(c));
+    cells.slice(from,to+1).forEach(c=>{
+      c.classList.add("drag-selected");
+      this.selected.push({key:c.dataset.m+c.dataset.d+c.dataset.slot, el:c, m:c.dataset.m, d:c.dataset.d, slot:c.dataset.slot});
+    });
   },
 
-  _buildCrewRange(startEl, endEl){
-    // 開始・終了の日付インデックスを取得
-    const table=startEl.closest("table");
+  _buildCrewRange(endCell){
+    const table=this.startCell.closest("table");
     if(!table) return;
-    // 同じtableのcrew行を全取得
-    const allCrewCells=[...table.querySelectorAll("[data-type='crew']")];
-    // 開始・終了セルの列インデックス（data-dで判断）
-    const startD=startEl.dataset.d, endD=endEl.dataset.d, startM=startEl.dataset.m, endM=endEl.dataset.m;
-    // 日付を数値として比較（月をまたぐ場合もm+d文字列で比較）
-    const dateKey=(m,d)=>m+d;
-    const sk=dateKey(startM,startD), ek=dateKey(endM,endD);
-    const [fromKey,toKey]=[sk,ek].sort();
+    const allCrew=[...table.querySelectorAll("[data-type='crew']")];
+
+    // 全crew行の名前リストを順番通りに取得
+    const nameOrder=[]; const seen=new Set();
+    allCrew.forEach(c=>{ if(!seen.has(c.dataset.name)){seen.add(c.dataset.name);nameOrder.push(c.dataset.name);} });
+
+    const startName=this.startCell.dataset.name, endName=endCell.dataset.name;
+    const si=nameOrder.indexOf(startName), ei=nameOrder.indexOf(endName);
+    const fromNi=Math.min(si,ei), toNi=Math.max(si,ei);
+    const nameRange=new Set(nameOrder.slice(fromNi,toNi+1));
+
+    // 日付範囲
+    const startD=parseInt(this.startCell.dataset.d), endD=parseInt(endCell.dataset.d);
+    const startM=this.startCell.dataset.m, endM=endCell.dataset.m;
+    // 月が同じ前提（月またぎは今は非対応）
+    const sameM = startM===endM ? startM : null;
+    const fromD=Math.min(startD,endD), toD=Math.max(startD,endD);
+
     this._clearHighlight(); this.selected=[];
-    allCrewCells.forEach(c=>{
-      const ck=dateKey(c.dataset.m,c.dataset.d);
-      if(ck>=fromKey && ck<=toKey) this._addCell(c);
+    allCrew.forEach(c=>{
+      if(!nameRange.has(c.dataset.name)) return;
+      const cD=parseInt(c.dataset.d);
+      if(sameM){
+        if(c.dataset.m!==sameM) return;
+        if(cD<fromD||cD>toD) return;
+      } else {
+        // 月またぎ：startM側はstartD以降、endM側はendD以前
+        if(c.dataset.m===startM && cD<Math.min(startD,endD)) return;
+        if(c.dataset.m===endM && cD>Math.max(startD,endD)) return;
+        if(c.dataset.m!==startM && c.dataset.m!==endM) return;
+      }
+      c.classList.add("drag-selected");
+      this.selected.push({key:c.dataset.m+c.dataset.d+c.dataset.name, el:c, m:c.dataset.m, d:c.dataset.d, name:c.dataset.name});
     });
   },
 
   _clearHighlight(){
     document.querySelectorAll(".drag-selected").forEach(el=>el.classList.remove("drag-selected"));
   },
-
   _updateBadge(){
     if(!this.badge){ this.badge=document.createElement("div"); this.badge.className="drag-count-badge"; document.body.appendChild(this.badge); }
     this.badge.textContent=`${this.selected.length}セル選択中`;
   },
-
   _removeBadge(){
     if(this.badge){ this.badge.remove(); this.badge=null; }
   },
-
   clear(){
-    this._clearHighlight();
-    this._removeBadge();
-    this.selected=[]; this.dragging=false; this.moved=false;
+    this._clearHighlight(); this._removeBadge();
+    this.selected=[]; this.active=false; this.isDrag=false;
   }
 };
 
 document.addEventListener("mousemove", e=>Drag.over(e));
 document.addEventListener("mouseup",   e=>Drag.end(e));
-document.addEventListener("mouseleave",e=>{ if(Drag.dragging) Drag.end(e); });
+document.addEventListener("mouseleave",e=>{ if(Drag.active){ Drag.active=false; Drag._removeBadge(); } });
 
 // ======== AUTH ========
 async function handleCallback(){
@@ -578,7 +589,7 @@ function renderMonth(md){
       const cls=dc(dow);
       const bgStyle=val.color?`background:${val.color};`:"";
       const ed=isEditor
-        ?`class="cell-ship ${cls} editable" data-type="ship" data-m="${m}" data-slot="${slot}" data-d="${dd(d)}" data-label="${label} ${y}/${mo+1}/${d}" style="${bgStyle}" onmousedown="Drag.start(event,this)" onclick="Drag.click(event,this,'ship')"`
+        ?`class="cell-ship ${cls} editable" data-type="ship" data-m="${m}" data-slot="${slot}" data-d="${dd(d)}" data-label="${label} ${y}/${mo+1}/${d}" style="${bgStyle}" onmousedown="Drag.start(event,this)"`
         :`class="cell-ship ${cls}" style="${bgStyle}"`;
       h+=`<td ${ed}><div class="cell-content">${esc(val.text||"")}</div></td>`;
     });
@@ -602,7 +613,7 @@ function renderMonth(md){
       else if(ship) badge=`<span class="badge-ship" style="background:${col.bg};color:${col.text};border-color:${col.border}">${esc(ship)}</span>`;
       else if(val.note) badge=`<span style="font-size:10px;color:#6b7fa0">${esc(val.note)}</span>`;
       const ed=isEditor
-        ?`class="cell-crew ${cls} editable" data-type="crew" data-m="${m}" data-name="${name}" data-d="${dd(d)}" data-label="${y}/${mo+1}/${d} ${name}" style="${bgStyle}" onmousedown="Drag.start(event,this)" onclick="Drag.click(event,this,'crew')"`
+        ?`class="cell-crew ${cls} editable" data-type="crew" data-m="${m}" data-name="${name}" data-d="${dd(d)}" data-label="${y}/${mo+1}/${d} ${name}" style="${bgStyle}" onmousedown="Drag.start(event,this)"`
         :`class="cell-crew ${cls}" style="${bgStyle}"`;
       h+=`<td ${ed}><div class="cell-crew-inner">${badge}</div></td>`;
     });
