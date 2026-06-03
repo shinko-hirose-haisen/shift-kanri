@@ -464,7 +464,11 @@ function getMonths(){
   if(curView===2) return [new Date(b.getFullYear(),b.getMonth()+1,1)];
   return [b,new Date(b.getFullYear(),b.getMonth()+1,1)];
 }
-function renderAll(){
+function renderAll(restoreScroll){
+  // スクロール位置を保存
+  const scrollPos={};
+  document.querySelectorAll(".stable-wrap").forEach((sw,i)=>{scrollPos[i]=sw.scrollLeft;});
+
   const b=new Date(curDate.getFullYear(),curDate.getMonth(),1);
   const n=new Date(b.getFullYear(),b.getMonth()+1,1);
   document.getElementById("mlbl").textContent=
@@ -473,6 +477,13 @@ function renderAll(){
     :`${n.getFullYear()}年 ${n.getMonth()+1}月`;
   document.getElementById("mc").innerHTML=getMonths().map(renderMonth).join("");
   const vl=document.getElementById("versionLbl");if(vl)vl.textContent=VERSION;
+
+  // スクロール位置を復元
+  if(restoreScroll!==false){
+    document.querySelectorAll(".stable-wrap").forEach((sw,i)=>{
+      if(scrollPos[i]) sw.scrollLeft=scrollPos[i];
+    });
+  }
   setTimeout(syncScrollBars,100);
 }
 function renderMonth(md){
@@ -893,16 +904,16 @@ const App={
     rebuildDerived();
     saveSettings();
     this.closeSettings();
-    renderAll();
+    renderAll(false);
     toast("設定を保存しました");
   },
-  pm(){curDate=new Date(curDate.getFullYear(),curDate.getMonth()-1,1);renderAll();},
-  nm(){curDate=new Date(curDate.getFullYear(),curDate.getMonth()+1,1);renderAll();},
+  pm(){curDate=new Date(curDate.getFullYear(),curDate.getMonth()-1,1);renderAll(false);},
+  nm(){curDate=new Date(curDate.getFullYear(),curDate.getMonth()+1,1);renderAll(false);},
   sv(v){
     curView=v;
     ["tab1","tab2","tabA"].forEach(id=>document.getElementById(id).classList.remove("active"));
     document.getElementById(v===1?"tab1":v===2?"tab2":"tabA").classList.add("active");
-    renderAll();
+    renderAll(false);
   },
   // 船ポップアップ
   closeShip(){document.getElementById("shipPop").classList.add("hidden");shipCtx=null;},
