@@ -89,6 +89,7 @@
   .cell-crew-inner{padding:2px;min-height:28px;display:flex;align-items:center;justify-content:center;}
   .badge-off{background:rgba(229,57,53,0.2);color:#ef9a9a;border:1px solid rgba(229,57,53,0.4);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:1px;}
   .badge-work{background:rgba(0,137,123,0.2);color:#80cbc4;border:1px solid rgba(0,137,123,0.3);border-radius:4px;padding:2px 8px;font-size:10px;}
+  .badge-ship{font-size:10px;font-weight:700;letter-spacing:0.5px;}
   .cell-crew.editable:hover{background:rgba(33,150,243,0.08);cursor:pointer;}
 
   /* LOGIN */
@@ -221,13 +222,18 @@ async function genChallenge(v){
 }
 
 // ======== STATE ========
-const SHIPS = ["進広丸","第八進広丸","TBN"];
-const SHIP_SLOTS = SHIPS.flatMap(s=>[s+"_1",s+"_2"]);
+const SHIPS = ["進広丸","第八進広丸"];
+const SHIP_SLOTS = ["進広丸_1","進広丸_2","第八進広丸_1","第八進広丸_2"];
 const SHIP_LABEL = {};
 SHIPS.forEach(s=>{SHIP_LABEL[s+"_1"]=s+" ①";SHIP_LABEL[s+"_2"]=s+" ②";});
 const SHIP_IS_FIRST = new Set(SHIPS.map(s=>s+"_1"));
 const CREW  = ["松下","松田","池上","川辺","緒方","川本","古川","迫田","髙戸(誠)","丸山","山本"];
 const DOW   = ["日","月","火","水","木","金","土"];
+const SHIP_COLORS = {
+  "進広丸":   { bg: "rgba(25,100,200,0.25)",  border: "rgba(25,100,200,0.6)",  text: "#7eb8ff" },
+  "第八進広丸":{ bg: "rgba(0,180,120,0.2)",   border: "rgba(0,180,120,0.5)",   text: "#5be0b0" },
+  "":         { bg: "",                        border: "",                       text: "" }
+};
 
 let token      = sessionStorage.getItem("shift_token") || null;
 let isEditor   = false;
@@ -389,8 +395,17 @@ function renderMonth(md){
     h+=`<tr class="row-crew"><td>${name}</td>`;
     days.forEach(({d,dow})=>{
       const val=getCrew(m,name,dd(d)), cls=dc(dow);
-      const badge=val==="休"?`<span class="badge-off">休</span>`:val?`<span class="badge-work">${esc(val)}</span>`:"";
-      const ed=isEditor?`class="cell-crew ${cls} editable" onclick="App.openCrewPopup('${m}','${name}','${dd(d)}','${y}/${mo+1}/${d} ${name}')"`:`class="cell-crew ${cls}"`;
+      // valは "休" or "進広丸" or "第八進広丸" or ""
+      const ship = (val!=="休") ? val : "";
+      const col = SHIP_COLORS[ship] || SHIP_COLORS[""];
+      const bgStyle = col.bg ? `background:${col.bg};` : "";
+      const borderStyle = col.border ? `outline:1px solid ${col.border};outline-offset:-1px;` : "";
+      const badge = val==="休"
+        ? `<span class="badge-off">休</span>`
+        : val ? `<span class="badge-ship" style="color:${col.text}">${esc(val)}</span>` : "";
+      const ed = isEditor
+        ? `class="cell-crew ${cls} editable" style="${bgStyle}${borderStyle}" onclick="App.openCrewPopup('${m}','${name}','${dd(d)}','${y}/${mo+1}/${d} ${name}')"`
+        : `class="cell-crew ${cls}" style="${bgStyle}${borderStyle}"`;
       h+=`<td ${ed}><div class="cell-crew-inner">${badge}</div></td>`;
     });
     h+=`</tr>`;
@@ -469,16 +484,23 @@ const App = {
     if(!isEditor) return;
     popupCtx={type:"crew",m,name,d};
     const val=getCrew(m,name,d);
-    document.getElementById("popupTitle").textContent=`${title} ─ 勤怠`;
+    document.getElementById("popupTitle").textContent=`${title} ─ 乗船・勤怠`;
+    const ships=["進広丸","第八進広丸"];
+    const shipOpts=ships.map(s=>{
+      const col=SHIP_COLORS[s];
+      const active=(val===s)?' active':'';
+      return `<div class="popup-opt crew-ship-opt${active}" data-ship="${s}" style="${active?'background:'+col.bg+';color:'+col.text+';border-color:'+col.border+';':''}" onclick="selCrewShip('${s}')">${s}</div>`;
+    }).join("");
     document.getElementById("popupBody").innerHTML=`
-      <div class="popup-label">ステータスを選択</div>
-      <div class="popup-options" style="gap:10px;margin-top:6px">
-        <div class="popup-opt${val===''?' active':''}" id="opt-work" onclick="selCrew('')">出勤</div>
-        <div class="popup-opt${val==='休'?' active':''}" id="opt-off" onclick="selCrew('休')">休暇</div>
+      <div class="popup-label">乗船する船を選択</div>
+      <div class="popup-options" style="gap:8px;margin-top:6px">${shipOpts}</div>
+      <div class="popup-options" style="gap:8px;margin-top:8px">
+        <div class="popup-opt${val===''?' active':''}" id="opt-none" onclick="selCrewShip('')">未定</div>
+        <div class="popup-opt${val==='休'?' active':''}" id="opt-off" onclick="selCrewShip('休')">休暇</div>
       </div>
       <div style="margin-top:12px">
-      <div class="popup-label">その他（自由入力）</div>
-      <input type="text" class="popup-textarea" id="popupInput" style="height:36px;resize:none" placeholder="例：現場立会、小型船舶免許" value="${val!==''&&val!=='休'?val:''}">
+      <div class="popup-label">その他メモ（自由入力）</div>
+      <input type="text" class="popup-textarea" id="popupInput" style="height:36px;resize:none" placeholder="例：現場立会、小型船舶免許" value="">
       </div>`;
     document.getElementById("popupOverlay").classList.remove("hidden");
   },
@@ -487,8 +509,11 @@ const App = {
     if(popupCtx.type==="ship"){
       setShip(popupCtx.m,popupCtx.ship,popupCtx.d,document.getElementById("popupInput").value.trim());
     } else {
-      const sel=document.querySelector(".popup-opt.active")?.id;
-      if(sel==="opt-off") setCrew(popupCtx.m,popupCtx.name,popupCtx.d,"休");
+      const sel=document.querySelector(".popup-opt.active");
+      const selId=sel?.id;
+      const selShip=sel?.dataset?.ship;
+      if(selId==="opt-off") setCrew(popupCtx.m,popupCtx.name,popupCtx.d,"休");
+      else if(selShip) setCrew(popupCtx.m,popupCtx.name,popupCtx.d,selShip);
       else setCrew(popupCtx.m,popupCtx.name,popupCtx.d,document.getElementById("popupInput")?.value.trim()||"");
     }
     this.closePopup(); renderAll(); schedSave();
@@ -501,10 +526,27 @@ const App = {
 
 function addQ(t){const i=document.getElementById("popupInput");i.value=i.value?(i.value+"\n"+t):t;i.focus();}
 function clearQ(){const i=document.getElementById("popupInput");if(i){i.value="";i.focus();}}
-function selCrew(v){
-  document.querySelectorAll(".popup-opt[id^='opt-']").forEach(e=>e.classList.remove("active"));
-  (v==="休"?document.getElementById("opt-off"):document.getElementById("opt-work"))?.classList.add("active");
-  const i=document.getElementById("popupInput");if(v==="休"&&i)i.value="";
+function selCrewShip(v){
+  // 全選択解除
+  document.querySelectorAll(".popup-opt").forEach(e=>{
+    e.classList.remove("active");
+    if(e.classList.contains("crew-ship-opt")){
+      e.style.background=""; e.style.color=""; e.style.borderColor="";
+    }
+  });
+  if(v==="休"){
+    document.getElementById("opt-off")?.classList.add("active");
+  } else if(v===""){
+    document.getElementById("opt-none")?.classList.add("active");
+  } else {
+    const col=SHIP_COLORS[v];
+    const el=document.querySelector(`.crew-ship-opt[data-ship="${v}"]`);
+    if(el){
+      el.classList.add("active");
+      el.style.background=col.bg; el.style.color=col.text; el.style.borderColor=col.border;
+    }
+  }
+  const i=document.getElementById("popupInput");if(i)i.value="";
 }
 function showToast(msg){
   const t=document.createElement("div");t.className="toast";t.textContent=msg;
