@@ -156,6 +156,8 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
   </div>
   <div class="main" id="mc"><div class="loading"><div class="spinner"></div><span>読み込み中...</span></div></div>
 </div>
+  <div style="text-align:center;padding:10px;font-size:10px;color:var(--text3);border-top:1px solid var(--border);margin-top:4px">
+    社船 作業・休暇予定表 <span id="versionLbl" style="font-weight:700;color:var(--text2)"></span>
 
 <!-- 個別編集ポップアップ(船) -->
 <div class="overlay hidden" id="shipPop">
@@ -255,14 +257,19 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
 // ===== CONFIG =====
 const CLIENT_ID   = "31411124-c9a3-4c1a-b357-343c1650b98c";
 const TENANT_ID   = "shinko1.onmicrosoft.com";
-const SCOPES      = ["https://graph.microsoft.com/Files.ReadWrite","https://graph.microsoft.com/User.Read"];
-const DATA_FILE   = "shift-app-data.json";
+const SCOPES      = ["https://graph.microsoft.com/User.Read"];
 const REDIR       = location.href.split("?")[0].split("#")[0];
+// Supabase
+const SB_URL  = "https://urjmgvikvfktwhrsnnva.supabase.co";
+const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVyam1ndmlrdmZrdHdocnNubnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzMxMjAsImV4cCI6MjA5NjA0OTEyMH0.Uz2ueK7QlksNsi6CyXJKz29KKDZd-iSGZq3tQxQOZg8";
 
 // ===== PKCE =====
 function b64u(b){return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");}
 async function mkV(){return b64u(crypto.getRandomValues(new Uint8Array(32)));}
 async function mkC(v){return b64u(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));}
+
+// ===== VERSION =====
+const VERSION = 'v1.0.0';
 
 // ===== CONSTANTS =====
 const SHIPS=["進広丸","第八進広丸"];
@@ -320,17 +327,27 @@ async function doLogin(){
   location.href=`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?`+new URLSearchParams({client_id:CLIENT_ID,response_type:"code",redirect_uri:REDIR,scope:SCOPES.join(" "),code_challenge:c,code_challenge_method:"S256",response_mode:"query"});
 }
 
-// ===== ONEDRIVE =====
+// ===== SUPABASE =====
 async function loadData(){
-  if(!token) return;
-  try{const r=await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${DATA_FILE}:/content`,{headers:{Authorization:"Bearer "+token}});if(r.ok)appData=await r.json();else appData={};}
-  catch(e){appData={};}
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/shift_data?id=eq.main&select=data`,{
+      headers:{apikey:SB_KEY,Authorization:"Bearer "+SB_KEY}
+    });
+    if(r.ok){const j=await r.json();appData=j[0]?.data||{};}
+    else appData={};
+  }catch(e){appData={};}
 }
 async function saveData(){
-  if(!token) return;
   setSS("saving");
-  try{await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${DATA_FILE}:/content`,{method:"PUT",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify(appData)});setSS("saved");}
-  catch(e){setSS("err");}
+  try{
+    const r=await fetch(`${SB_URL}/rest/v1/shift_data?id=eq.main`,{
+      method:"PATCH",
+      headers:{apikey:SB_KEY,Authorization:"Bearer "+SB_KEY,"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({data:appData,updated_at:new Date().toISOString()})
+    });
+    if(r.ok) setSS("saved");
+    else setSS("err");
+  }catch(e){setSS("err");}
 }
 function sched(){setSS("saving");clearTimeout(saveTimer);saveTimer=setTimeout(saveData,1500);}
 function setSS(s){
@@ -368,6 +385,7 @@ function renderAll(){
     :curView===1?`${b.getFullYear()}年 ${b.getMonth()+1}月`
     :`${n.getFullYear()}年 ${n.getMonth()+1}月`;
   document.getElementById("mc").innerHTML=getMonths().map(renderMonth).join("");
+  const vl=document.getElementById("versionLbl");if(vl)vl.textContent=VERSION;
 }
 function renderMonth(md){
   const y=md.getFullYear(),mo=md.getMonth(),m=mkey(md);
@@ -643,7 +661,8 @@ const App={
     document.getElementById("loginPg").classList.add("hidden");
     document.getElementById("appPg").classList.remove("hidden");
     this.updateUI();
-    if(isEd){document.getElementById("mc").innerHTML='<div class="loading"><div class="spinner"></div><span>データ読み込み中...</span></div>';await loadData();}
+    document.getElementById("mc").innerHTML='<div class="loading"><div class="spinner"></div><span>データ読み込み中...</span></div>';
+    await loadData();
     renderAll();
     this.bindEvents();
   },
