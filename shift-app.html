@@ -45,6 +45,11 @@ header{background:var(--hbg);padding:10px 20px;display:flex;align-items:center;j
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .main{padding:16px 20px;}
 .stable-wrap{overflow-x:auto;background:#fff;border-radius:8px;border:1px solid var(--border);margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);}
+/* スクロールバーを常時表示 */
+.stable-wrap::-webkit-scrollbar{height:10px;}
+.stable-wrap::-webkit-scrollbar-track{background:#f0f2f6;border-radius:0 0 8px 8px;}
+.stable-wrap::-webkit-scrollbar-thumb{background:#b0bcd4;border-radius:5px;}
+.stable-wrap::-webkit-scrollbar-thumb:hover{background:#7e94b8;}
 table{border-collapse:collapse;min-width:100%;}
 th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
 .th-lbl{background:#f0f2f6;padding:7px 10px;font-size:11px;font-weight:700;color:var(--text2);white-space:nowrap;min-width:90px;text-align:center;position:sticky;left:0;z-index:10;border-right:2px solid var(--primary);}
