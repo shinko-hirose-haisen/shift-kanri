@@ -5,128 +5,140 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>社船 作業・休暇予定表</title>
 <style>
-  :root {
-    --navy: #0a1628; --navy2: #112240; --blue: #1a3a5c;
-    --accent: #2196f3; --accent2: #00b4d8; --gold: #f0a500;
-    --red: #e53935; --green: #00897b; --bg: #0d1b2a;
-    --cell-bg: #0f2035; --cell-border: #1e3a5f;
-    --text: #e8f0fe; --text2: #90a4c8;
-    --sunday: #ff5252; --saturday: #42a5f5;
-    --holiday-bg: rgba(255,82,82,0.08);
-    --font: 'Noto Sans JP','Hiragino Kaku Gothic ProN',sans-serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;font-size:13px;}
+:root {
+  --primary: #1a6bb5; --primary2: #0d5a9e; --accent: #0096c7;
+  --bg: #f4f6f9; --white: #ffffff; --border: #d0d8e4;
+  --text: #1e2d40; --text2: #6b7fa0; --text3: #9aadc4;
+  --header-bg: #1a2d45; --header-text: #ffffff;
+  --controls-bg: #ffffff;
+  --sunday: #d32f2f; --saturday: #1565c0;
+  --sun-bg: #fff5f5; --sat-bg: #f0f4ff; --today-outline: #f0a500;
+  --ship-label-bg: #1a2d45; --ship-label-text: #f0c060;
+  --ship-sub-bg: #253a55; --ship-sub-text: #7eb8ff;
+  --crew-label-bg: #f0f2f6; --crew-label-text: #3a4d66;
+  --red: #e53935; --green: #2e7d32;
+  --font: 'Noto Sans JP','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;font-size:13px;}
 
-  header{
-    background:linear-gradient(135deg,var(--navy) 0%,var(--blue) 100%);
-    border-bottom:2px solid var(--accent2);padding:12px 20px;
-    display:flex;align-items:center;justify-content:space-between;
-    position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,180,216,0.15);
-  }
-  .header-left{display:flex;align-items:center;gap:12px;}
-  .header-logo{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
-  .header-title{font-size:16px;font-weight:700;letter-spacing:1px;}
-  .header-sub{font-size:11px;color:var(--text2);margin-top:2px;}
-  .header-right{display:flex;align-items:center;gap:10px;}
-  .auth-status{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px;}
-  .auth-dot{width:7px;height:7px;border-radius:50%;background:var(--text2);}
-  .auth-dot.online{background:#66bb6a;box-shadow:0 0 6px #66bb6a;}
+/* HEADER */
+header{background:var(--header-bg);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2);}
+.header-left{display:flex;align-items:center;gap:10px;}
+.header-logo{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--primary));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.header-title{font-size:15px;font-weight:700;color:var(--header-text);letter-spacing:0.5px;}
+.header-sub{font-size:10px;color:rgba(255,255,255,0.5);margin-top:1px;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.auth-status{font-size:11px;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:5px;}
+.auth-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);}
+.auth-dot.online{background:#66bb6a;box-shadow:0 0 5px #66bb6a;}
 
-  .btn{padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.2s;font-family:var(--font);}
-  .btn-primary{background:var(--accent);color:#fff;}
-  .btn-primary:hover{background:#1976d2;}
-  .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--cell-border);}
-  .btn-ghost:hover{background:var(--cell-bg);color:var(--text);}
-  .btn-success{background:var(--green);color:#fff;}
-  .btn-danger{background:var(--red);color:#fff;}
+/* BUTTONS */
+.btn{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s;font-family:var(--font);}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary2);}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg);}
+.btn-ghost-white{background:transparent;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.2);}
+.btn-ghost-white:hover{background:rgba(255,255,255,0.1);color:#fff;}
+.btn-success{background:var(--green);color:#fff;}
+.btn-success:hover{background:#1b5e20;}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-danger:hover{background:#b71c1c;}
 
-  .controls{
-    background:var(--navy2);border-bottom:1px solid var(--cell-border);
-    padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
-  }
-  .month-nav{display:flex;align-items:center;gap:8px;}
-  .month-nav button{width:28px;height:28px;border-radius:6px;background:var(--cell-bg);border:1px solid var(--cell-border);color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
-  .month-nav button:hover{background:var(--accent);border-color:var(--accent);}
-  .month-label{font-size:15px;font-weight:700;min-width:100px;text-align:center;color:var(--accent2);}
-  .view-tabs{display:flex;gap:4px;}
-  .tab{padding:5px 14px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s;background:var(--cell-bg);color:var(--text2);border:1px solid var(--cell-border);}
-  .tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .save-status{margin-left:auto;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px;}
-  .save-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
-  .save-dot.saving{background:var(--gold);animation:pulse 0.8s infinite;}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+/* CONTROLS */
+.controls{background:var(--controls-bg);border-bottom:1px solid var(--border);padding:9px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.month-nav{display:flex;align-items:center;gap:6px;}
+.month-nav button{width:26px;height:26px;border-radius:5px;background:var(--bg);border:1px solid var(--border);color:var(--text);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.month-nav button:hover{background:var(--primary);border-color:var(--primary);color:#fff;}
+.month-label{font-size:14px;font-weight:700;min-width:120px;text-align:center;color:var(--primary);}
+.view-tabs{display:flex;gap:3px;}
+.tab{padding:4px 12px;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600;transition:all 0.15s;background:var(--bg);color:var(--text2);border:1px solid var(--border);}
+.tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.save-status{margin-left:auto;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px;}
+.save-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+.save-dot.saving{background:#f0a500;animation:pulse 0.8s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 
-  .main{padding:16px 20px;}
-  .section-title{font-size:12px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--cell-border);display:flex;align-items:center;gap:8px;}
+/* MAIN */
+.main{padding:16px 20px;}
+.section-title{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;margin-bottom:8px;padding-bottom:5px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:6px;}
 
-  .table-wrap{overflow-x:auto;background:var(--cell-bg);border-radius:10px;border:1px solid var(--cell-border);margin-bottom:20px;box-shadow:0 4px 24px rgba(0,0,0,0.3);}
-  table{border-collapse:collapse;min-width:100%;}
-  th,td{border:1px solid var(--cell-border);padding:0;vertical-align:top;}
+/* TABLE */
+.table-wrap{overflow-x:auto;background:var(--white);border-radius:8px;border:1px solid var(--border);margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);}
+table{border-collapse:collapse;min-width:100%;}
+th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
 
-  .th-label{background:var(--navy);padding:8px 10px;font-size:11px;font-weight:700;color:var(--text2);white-space:nowrap;min-width:80px;text-align:center;position:sticky;left:0;z-index:10;border-right:2px solid var(--accent);}
-  .th-date{background:var(--navy2);min-width:90px;width:90px;text-align:center;padding:4px 2px;}
-  .th-date .date-num{font-size:13px;font-weight:700;}
-  .th-date .date-dow{font-size:10px;font-weight:600;margin-top:1px;}
-  .th-date.sun{background:rgba(255,82,82,0.15);}
-  .th-date.sun .date-dow{color:var(--sunday);}
-  .th-date.sat{background:rgba(66,165,245,0.1);}
-  .th-date.sat .date-dow{color:var(--saturday);}
+.th-label{background:#f0f2f6;padding:7px 10px;font-size:11px;font-weight:700;color:var(--text2);white-space:nowrap;min-width:90px;text-align:center;position:sticky;left:0;z-index:10;border-right:2px solid var(--primary);}
+.th-date{background:#f8f9fb;min-width:88px;width:88px;text-align:center;padding:4px 2px;}
+.th-date .date-num{font-size:13px;font-weight:700;color:var(--text);}
+.th-date .date-dow{font-size:10px;font-weight:600;margin-top:1px;color:var(--text2);}
+.th-date.sun{background:var(--sun-bg);}
+.th-date.sun .date-num,.th-date.sun .date-dow{color:var(--sunday);}
+.th-date.sat{background:var(--sat-bg);}
+.th-date.sat .date-num,.th-date.sat .date-dow{color:var(--saturday);}
 
-  .row-ship td:first-child{background:linear-gradient(90deg,var(--navy) 0%,var(--navy2) 100%);font-weight:700;font-size:12px;color:var(--gold);padding:8px 10px;white-space:nowrap;position:sticky;left:0;z-index:5;border-right:2px solid var(--accent);}
-  .row-ship-sub td:first-child{background:var(--navy2)!important;color:var(--accent2)!important;font-weight:500!important;font-size:11px!important;border-top:1px dashed var(--cell-border);}
-  .row-ship-sub .cell-ship{border-top:1px dashed var(--cell-border);}
-  .cell-ship{background:var(--cell-bg);min-width:90px;width:90px;position:relative;}
-  .cell-ship.sun{background:var(--holiday-bg);}
-  .cell-ship.sat{background:rgba(66,165,245,0.04);}
-  .cell-content{padding:4px 5px;min-height:70px;font-size:11px;line-height:1.5;color:var(--text);}
-  .cell-ship.editable:hover{background:rgba(33,150,243,0.08);cursor:pointer;}
+/* SHIP ROWS */
+.row-ship td:first-child{background:var(--ship-label-bg);font-weight:700;font-size:12px;color:var(--ship-label-text);padding:7px 10px;white-space:nowrap;position:sticky;left:0;z-index:5;border-right:2px solid var(--primary);}
+.row-ship-sub td:first-child{background:var(--ship-sub-bg)!important;color:var(--ship-sub-text)!important;font-weight:500!important;font-size:11px!important;border-top:1px dashed #2e4a6a;}
+.row-ship-sub .cell-ship{border-top:1px dashed #e0e6ef;}
+.cell-ship{background:var(--white);min-width:88px;width:88px;position:relative;}
+.cell-ship.sun{background:var(--sun-bg);}
+.cell-ship.sat{background:var(--sat-bg);}
+.cell-content{padding:4px 5px;min-height:64px;font-size:11px;line-height:1.5;color:var(--text);}
+.cell-ship.editable:hover{background:#eef4ff;cursor:pointer;}
 
-  .row-crew td:first-child{background:var(--navy2);font-size:11px;font-weight:600;color:var(--text);padding:5px 10px;white-space:nowrap;position:sticky;left:0;z-index:5;border-right:2px solid var(--accent);}
-  .cell-crew{background:var(--cell-bg);min-width:90px;width:90px;text-align:center;vertical-align:middle;}
-  .cell-crew.sun{background:var(--holiday-bg);}
-  .cell-crew.sat{background:rgba(66,165,245,0.04);}
-  .cell-crew-inner{padding:2px;min-height:28px;display:flex;align-items:center;justify-content:center;}
-  .badge-off{background:rgba(229,57,53,0.2);color:#ef9a9a;border:1px solid rgba(229,57,53,0.4);border-radius:4px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:1px;}
-  .badge-work{background:rgba(0,137,123,0.2);color:#80cbc4;border:1px solid rgba(0,137,123,0.3);border-radius:4px;padding:2px 8px;font-size:10px;}
-  .badge-ship{font-size:10px;font-weight:700;letter-spacing:0.5px;}
-  .cell-crew.editable:hover{background:rgba(33,150,243,0.08);cursor:pointer;}
+/* CREW ROWS */
+.row-crew td:first-child{background:var(--crew-label-bg);font-size:11px;font-weight:600;color:var(--crew-label-text);padding:4px 10px;white-space:nowrap;position:sticky;left:0;z-index:5;border-right:2px solid var(--primary);}
+.cell-crew{background:var(--white);min-width:88px;width:88px;text-align:center;vertical-align:middle;}
+.cell-crew.sun{background:var(--sun-bg);}
+.cell-crew.sat{background:var(--sat-bg);}
+.cell-crew-inner{padding:2px;min-height:26px;display:flex;align-items:center;justify-content:center;}
+.badge-off{background:#ffebee;color:#c62828;border:1px solid #ffcdd2;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;letter-spacing:1px;}
+.badge-ship{font-size:10px;font-weight:700;letter-spacing:0.3px;border-radius:4px;padding:1px 6px;border:1px solid;}
+.cell-crew.editable:hover{background:#eef4ff;cursor:pointer;}
 
-  /* LOGIN */
-  .login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#0d2137 0%,var(--bg) 70%);}
-  .login-card{background:var(--navy2);border:1px solid var(--cell-border);border-radius:16px;padding:40px;text-align:center;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
-  .login-icon{font-size:48px;margin-bottom:16px;}
-  .login-title{font-size:20px;font-weight:700;margin-bottom:6px;}
-  .login-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.6;}
-  .login-btn-main{width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;border:none;cursor:pointer;font-size:16px;font-weight:700;font-family:var(--font);transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(0,180,216,0.3);}
-  .login-btn-main:hover{filter:brightness(1.1);transform:translateY(-2px);}
-  .login-divider{display:flex;align-items:center;gap:10px;margin:20px 0 16px;color:var(--text2);font-size:11px;}
-  .login-divider::before,.login-divider::after{content:"";flex:1;height:1px;background:var(--cell-border);}
-  .login-edit-btn{width:100%;padding:9px;border-radius:7px;background:transparent;color:var(--text2);border:1px solid var(--cell-border);cursor:pointer;font-size:12px;font-family:var(--font);transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;}
-  .login-edit-btn:hover{border-color:var(--accent);color:var(--text);background:rgba(33,150,243,0.08);}
-  .login-note{font-size:11px;color:var(--text2);margin-top:10px;}
+/* LOGIN */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2d45 0%,#0d4a7a 100%);}
+.login-card{background:#fff;border-radius:16px;padding:40px;text-align:center;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.login-icon{font-size:44px;margin-bottom:14px;}
+.login-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:26px;}
+.login-btn-main{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--primary));color:#fff;border:none;cursor:pointer;font-size:15px;font-weight:700;font-family:var(--font);transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(26,107,181,0.3);}
+.login-btn-main:hover{filter:brightness(1.08);transform:translateY(-1px);}
+.login-divider{display:flex;align-items:center;gap:10px;margin:18px 0 14px;color:var(--text3);font-size:11px;}
+.login-divider::before,.login-divider::after{content:"";flex:1;height:1px;background:var(--border);}
+.login-edit-btn{width:100%;padding:9px;border-radius:7px;background:transparent;color:var(--text2);border:1px solid var(--border);cursor:pointer;font-size:12px;font-family:var(--font);transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.login-edit-btn:hover{border-color:var(--primary);color:var(--primary);}
+.login-note{font-size:11px;color:var(--text3);margin-top:10px;}
 
-  /* POPUP */
-  .popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:center;justify-content:center;}
-  .popup-box{background:var(--navy2);border:1px solid var(--accent);border-radius:12px;padding:20px;min-width:300px;max-width:400px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.5);}
-  .popup-title{font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--cell-border);}
-  .popup-label{font-size:11px;color:var(--text2);margin-bottom:5px;}
-  .popup-textarea{width:100%;padding:8px;background:var(--cell-bg);border:1px solid var(--cell-border);color:var(--text);border-radius:6px;font-size:12px;font-family:var(--font);resize:vertical;min-height:90px;outline:none;line-height:1.6;}
-  .popup-textarea:focus{border-color:var(--accent);}
-  .popup-options{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
-  .popup-opt{padding:4px 10px;border-radius:4px;background:var(--cell-bg);border:1px solid var(--cell-border);color:var(--text2);cursor:pointer;font-size:11px;transition:all 0.15s;}
-  .popup-opt:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
-  .popup-opt.active{background:var(--red);color:#fff;border-color:var(--red);}
-  .popup-actions{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;}
+/* POPUP */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;}
+.popup-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px;min-width:310px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.18);}
+.popup-title{font-size:13px;font-weight:700;color:var(--primary);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.popup-label{font-size:11px;color:var(--text2);margin-bottom:5px;margin-top:10px;}
+.popup-textarea{width:100%;padding:8px;background:#f8f9fb;border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;font-family:var(--font);resize:vertical;min-height:80px;outline:none;line-height:1.6;}
+.popup-textarea:focus{border-color:var(--primary);background:#fff;}
+.popup-options{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.popup-opt{padding:4px 10px;border-radius:5px;background:#f0f2f6;border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:11px;font-weight:600;transition:all 0.15s;}
+.popup-opt:hover{background:var(--primary);color:#fff;border-color:var(--primary);}
+.popup-opt.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.popup-actions{display:flex;gap:8px;margin-top:16px;justify-content:space-between;align-items:center;}
+.popup-actions-right{display:flex;gap:8px;}
 
-  .loading{display:flex;align-items:center;justify-content:center;min-height:200px;color:var(--text2);flex-direction:column;gap:12px;}
-  .spinner{width:32px;height:32px;border-radius:50%;border:3px solid var(--cell-border);border-top-color:var(--accent);animation:spin 0.8s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg)}}
+/* 色選択スウォッチ */
+.color-swatches{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.swatch{width:24px;height:24px;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:all 0.15s;}
+.swatch:hover{transform:scale(1.15);}
+.swatch.active{border-color:var(--text)!important;transform:scale(1.15);}
 
-  .toast{position:fixed;bottom:24px;right:24px;background:var(--navy2);border:1px solid var(--accent);border-radius:8px;padding:10px 18px;font-size:12px;z-index:999;animation:fadeInUp 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.4);}
-  @keyframes fadeInUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-  .hidden{display:none!important;}
-  @media(max-width:600px){header{padding:10px 12px;}.main{padding:12px;}.controls{padding:8px 12px;gap:10px;}.th-date,.cell-ship,.cell-crew{min-width:72px;width:72px;}.header-sub{display:none;}}
+.loading{display:flex;align-items:center;justify-content:center;min-height:200px;color:var(--text2);flex-direction:column;gap:12px;}
+.spinner{width:30px;height:30px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--primary);animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--header-bg);color:#fff;border-radius:8px;padding:10px 16px;font-size:12px;z-index:999;animation:fadeUp 0.3s ease;box-shadow:0 4px 16px rgba(0,0,0,0.2);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.hidden{display:none!important;}
+@media(max-width:600px){header{padding:8px 12px;}.main{padding:10px;}.controls{padding:7px 12px;gap:8px;}.header-sub{display:none;}.th-date,.cell-ship,.cell-crew{min-width:70px;width:70px;}}
 </style>
 </head>
 <body>
@@ -162,8 +174,8 @@
         <div class="auth-dot" id="authDot"></div>
         <span id="authLabel">閲覧モード</span>
       </div>
-      <button class="btn btn-primary hidden" id="loginBtn" onclick="App.login()">ログイン</button>
-      <button class="btn btn-ghost hidden" id="logoutBtn" onclick="App.logout()">ログアウト</button>
+      <button class="btn btn-ghost-white hidden" id="loginBtn" onclick="App.login()">ログイン</button>
+      <button class="btn btn-ghost-white hidden" id="logoutBtn" onclick="App.logout()">ログアウト</button>
     </div>
   </header>
   <div class="controls">
@@ -193,155 +205,116 @@
     <div class="popup-title" id="popupTitle"></div>
     <div id="popupBody"></div>
     <div class="popup-actions">
-      <button class="btn btn-ghost" onclick="App.closePopup()">キャンセル</button>
-      <button class="btn btn-success" onclick="App.savePopup()">保存</button>
+      <button class="btn btn-danger" id="popupDeleteBtn" onclick="App.deletePopup()">削除</button>
+      <div class="popup-actions-right">
+        <button class="btn btn-ghost" onclick="App.closePopup()">キャンセル</button>
+        <button class="btn btn-success" onclick="App.savePopup()">保存</button>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 // ======== CONFIG ========
-const CLIENT_ID   = "31411124-c9a3-4c1a-b357-343c1650b98c";
-const TENANT_ID   = "shinko1.onmicrosoft.com";
-const SCOPES      = ["https://graph.microsoft.com/Files.ReadWrite","https://graph.microsoft.com/User.Read"];
-const DATA_FILE   = "shift-app-data.json";
+const CLIENT_ID    = "31411124-c9a3-4c1a-b357-343c1650b98c";
+const TENANT_ID    = "shinko1.onmicrosoft.com";
+const SCOPES       = ["https://graph.microsoft.com/Files.ReadWrite","https://graph.microsoft.com/User.Read"];
+const DATA_FILE    = "shift-app-data.json";
 const REDIRECT_URI = location.href.split("?")[0].split("#")[0];
 
-// ======== PKCE HELPERS ========
-function b64url(buf){
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
-    .replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
-}
-async function genVerifier(){
-  const arr = crypto.getRandomValues(new Uint8Array(32));
-  return b64url(arr);
-}
-async function genChallenge(v){
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v));
-  return b64url(buf);
-}
+// ======== PKCE ========
+function b64url(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,""); }
+async function genVerifier(){ return b64url(crypto.getRandomValues(new Uint8Array(32))); }
+async function genChallenge(v){ return b64url(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v))); }
 
-// ======== STATE ========
+// ======== CONSTANTS ========
 const SHIPS = ["進広丸","第八進広丸"];
 const SHIP_SLOTS = ["進広丸_1","進広丸_2","第八進広丸_1","第八進広丸_2"];
-const SHIP_LABEL = {};
-SHIPS.forEach(s=>{SHIP_LABEL[s+"_1"]=s+" ①";SHIP_LABEL[s+"_2"]=s+" ②";});
-const SHIP_IS_FIRST = new Set(SHIPS.map(s=>s+"_1"));
-const CREW  = ["松下","松田","池上","川辺","緒方","川本","古川","迫田","髙戸(誠)","丸山","山本"];
-const DOW   = ["日","月","火","水","木","金","土"];
+const SHIP_LABEL = {"進広丸_1":"進広丸 ①","進広丸_2":"進広丸 ②","第八進広丸_1":"第八進広丸 ①","第八進広丸_2":"第八進広丸 ②"};
+const SHIP_IS_FIRST = new Set(["進広丸_1","第八進広丸_1"]);
+const CREW = ["松下","松田","池上","川辺","緒方","川本","古川","迫田","髙戸(誠)","丸山","山本"];
+const DOW  = ["日","月","火","水","木","金","土"];
+
+// 船色（乗組員セル用）
 const SHIP_COLORS = {
-  "進広丸":   { bg: "rgba(25,100,200,0.25)",  border: "rgba(25,100,200,0.6)",  text: "#7eb8ff" },
-  "第八進広丸":{ bg: "rgba(0,180,120,0.2)",   border: "rgba(0,180,120,0.5)",   text: "#5be0b0" },
-  "":         { bg: "",                        border: "",                       text: "" }
+  "進広丸":    { bg:"#dbeafe", border:"#3b82f6", text:"#1d4ed8" },
+  "第八進広丸":{ bg:"#dcfce7", border:"#22c55e", text:"#15803d" },
+  "":          { bg:"",        border:"",         text:"" }
 };
 
-let token      = sessionStorage.getItem("shift_token") || null;
-let isEditor   = false;
-let currentDate= new Date();
-let currentView= 1;
-let data       = {};
-let saveTimer  = null;
-let popupCtx   = null;
+// セル背景色パレット（船の作業セル用）
+const CELL_COLORS = [
+  {label:"なし",   bg:"",        text:""},
+  {label:"青",     bg:"#bfdbfe", text:"#1e40af"},
+  {label:"水色",   bg:"#bae6fd", text:"#0369a1"},
+  {label:"緑",     bg:"#bbf7d0", text:"#166534"},
+  {label:"黄",     bg:"#fef08a", text:"#854d0e"},
+  {label:"オレンジ",bg:"#fed7aa", text:"#9a3412"},
+  {label:"赤",     bg:"#fecaca", text:"#991b1b"},
+  {label:"紫",     bg:"#e9d5ff", text:"#6b21a8"},
+  {label:"グレー", bg:"#e2e8f0", text:"#334155"},
+];
+
+// ======== STATE ========
+let token       = sessionStorage.getItem("shift_token") || null;
+let isEditor    = false;
+let currentDate = new Date();
+let currentView = 1;
+let data        = {};
+let saveTimer   = null;
+let popupCtx    = null;
 
 // ======== AUTH ========
 async function handleCallback(){
   const params = new URLSearchParams(location.search);
   const code = params.get("code");
   if(!code) return;
-  // clean URL
-  history.replaceState({}, "", location.pathname);
+  history.replaceState({},"",location.pathname);
   const verifier = sessionStorage.getItem("pkce_verifier");
   if(!verifier){ showToast("認証エラー: verifierがありません"); return; }
-  const body = new URLSearchParams({
-    client_id: CLIENT_ID,
-    grant_type: "authorization_code",
-    code,
-    redirect_uri: REDIRECT_URI,
-    code_verifier: verifier,
-    scope: SCOPES.join(" ")
-  });
+  const body = new URLSearchParams({client_id:CLIENT_ID,grant_type:"authorization_code",code,redirect_uri:REDIRECT_URI,code_verifier:verifier,scope:SCOPES.join(" ")});
   try {
-    const res = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,{
-      method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body
-    });
+    const res = await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
     const json = await res.json();
-    if(json.access_token){
-      token = json.access_token;
-      sessionStorage.setItem("shift_token", token);
-      sessionStorage.removeItem("pkce_verifier");
-      isEditor = true;
-    } else {
-      showToast("ログイン失敗: " + (json.error_description || json.error));
-    }
-  } catch(e){ showToast("ログイン通信エラー: "+e.message); }
+    if(json.access_token){ token=json.access_token; sessionStorage.setItem("shift_token",token); sessionStorage.removeItem("pkce_verifier"); isEditor=true; }
+    else showToast("ログイン失敗: "+(json.error_description||json.error));
+  } catch(e){ showToast("通信エラー: "+e.message); }
 }
-
 async function startLogin(){
-  const verifier  = await genVerifier();
-  const challenge = await genChallenge(verifier);
-  sessionStorage.setItem("pkce_verifier", verifier);
-  const authUrl = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?`
-    + new URLSearchParams({
-        client_id: CLIENT_ID,
-        response_type: "code",
-        redirect_uri: REDIRECT_URI,
-        scope: SCOPES.join(" "),
-        code_challenge: challenge,
-        code_challenge_method: "S256",
-        response_mode: "query"
-      });
-  location.href = authUrl;
+  const v=await genVerifier(), c=await genChallenge(v);
+  sessionStorage.setItem("pkce_verifier",v);
+  location.href=`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?`+new URLSearchParams({client_id:CLIENT_ID,response_type:"code",redirect_uri:REDIRECT_URI,scope:SCOPES.join(" "),code_challenge:c,code_challenge_method:"S256",response_mode:"query"});
 }
 
 // ======== ONEDRIVE ========
 async function loadData(){
   if(!token) return;
-  try {
-    const res = await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${DATA_FILE}:/content`,{
-      headers:{Authorization:"Bearer "+token}
-    });
-    if(res.ok) data = await res.json();
-    else data = {};
-  } catch(e){ data={}; }
+  try { const r=await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${DATA_FILE}:/content`,{headers:{Authorization:"Bearer "+token}}); if(r.ok) data=await r.json(); else data={}; }
+  catch(e){ data={}; }
 }
 async function saveData(){
   if(!token) return;
   setSaveStatus("saving");
-  try {
-    await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${DATA_FILE}:/content`,{
-      method:"PUT",
-      headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},
-      body:JSON.stringify(data)
-    });
-    setSaveStatus("saved");
-  } catch(e){ setSaveStatus("error"); }
+  try { await fetch(`https://graph.microsoft.com/v1.0/me/drive/root:/${DATA_FILE}:/content`,{method:"PUT",headers:{Authorization:"Bearer "+token,"Content-Type":"application/json"},body:JSON.stringify(data)}); setSaveStatus("saved"); }
+  catch(e){ setSaveStatus("error"); }
 }
-function schedSave(){
-  setSaveStatus("saving");
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveData, 1500);
-}
+function schedSave(){ setSaveStatus("saving"); clearTimeout(saveTimer); saveTimer=setTimeout(saveData,1500); }
 function setSaveStatus(s){
-  const dot=document.getElementById("saveDot");
-  const lbl=document.getElementById("saveLabel");
+  const dot=document.getElementById("saveDot"), lbl=document.getElementById("saveLabel");
   if(!dot) return;
   if(s==="saving"){dot.className="save-dot saving";lbl.textContent="保存中...";}
-  else if(s==="saved"){dot.className="save-dot";lbl.textContent="保存済み";}
-  else{dot.className="save-dot";lbl.style.color="#ef5350";lbl.textContent="保存失敗";}
+  else if(s==="saved"){dot.className="save-dot";lbl.style.color="";lbl.textContent="保存済み";}
+  else{dot.className="save-dot";lbl.style.color="#e53935";lbl.textContent="保存失敗";}
 }
 
-// ======== DATA HELPERS ========
+// ======== DATA ========
 function mk(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
 function ensure(m){
-  if(!data[m]){
-    data[m]={ships:{},crew:{}};
-    SHIP_SLOTS.forEach(s=>data[m].ships[s]={});
-    CREW.forEach(c=>data[m].crew[c]={});
-  }
+  if(!data[m]){ data[m]={ships:{},crew:{}}; SHIP_SLOTS.forEach(s=>data[m].ships[s]={}); CREW.forEach(c=>data[m].crew[c]={}); }
 }
-function getShip(m,s,d){ ensure(m); return data[m].ships[s]?.[d]||""; }
+function getShip(m,s,d){ ensure(m); return data[m].ships[s]?.[d]||{text:"",color:""}; }
 function setShip(m,s,d,v){ ensure(m); if(!data[m].ships[s])data[m].ships[s]={}; data[m].ships[s][d]=v; }
-function getCrew(m,c,d){ ensure(m); return data[m].crew[c]?.[d]||""; }
+function getCrew(m,c,d){ ensure(m); return data[m].crew[c]?.[d]||{ship:"",note:""}; }
 function setCrew(m,c,d,v){ ensure(m); if(!data[m].crew[c])data[m].crew[c]={}; data[m].crew[c][d]=v; }
 
 // ======== RENDER ========
@@ -355,106 +328,102 @@ function renderAll(){
   const base=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
   const next=new Date(base.getFullYear(),base.getMonth()+1,1);
   document.getElementById("monthLabel").textContent=
-    currentView===0 ? `${base.getFullYear()}年 ${base.getMonth()+1}月〜${next.getMonth()+1}月`
-    : currentView===1 ? `${base.getFullYear()}年 ${base.getMonth()+1}月`
-    : `${next.getFullYear()}年 ${next.getMonth()+1}月`;
+    currentView===0?`${base.getFullYear()}年 ${base.getMonth()+1}月〜${next.getMonth()+1}月`
+    :currentView===1?`${base.getFullYear()}年 ${base.getMonth()+1}月`
+    :`${next.getFullYear()}年 ${next.getMonth()+1}月`;
   document.getElementById("mainContent").innerHTML=getMonths().map(renderMonth).join("");
 }
+
 function renderMonth(md){
-  const y=md.getFullYear(), mo=md.getMonth(), m=mk(md);
+  const y=md.getFullYear(),mo=md.getMonth(),m=mk(md);
   const days=Array.from({length:new Date(y,mo+1,0).getDate()},(_,i)=>({d:i+1,dow:new Date(y,mo,i+1).getDay()}));
   const isToday=(d)=>{const t=new Date();return t.getFullYear()===y&&t.getMonth()===mo&&t.getDate()===d;};
   const dc=(dow)=>dow===0?"sun":dow===6?"sat":"";
   const dd=(d)=>String(d).padStart(2,"0");
   const esc=(s)=>s?s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>"):"";
 
-  let h=`<div style="margin-bottom:28px">
+  let h=`<div style="margin-bottom:24px">
   <div class="section-title"><span>📅</span>${y}年 ${mo+1}月</div>
   <div class="table-wrap"><table><thead><tr>
   <th class="th-label">日付</th>
-  ${days.map(({d,dow})=>`<th class="th-date ${dc(dow)}"${isToday(d)?' style="outline:2px solid #f0a500;outline-offset:-2px"':''}><div class="date-num">${d}</div><div class="date-dow">${DOW[dow]}</div></th>`).join("")}
+  ${days.map(({d,dow})=>`<th class="th-date ${dc(dow)}"${isToday(d)?` style="outline:2px solid #f0a500;outline-offset:-2px"`:""}><div class="date-num">${d}</div><div class="date-dow">${DOW[dow]}</div></th>`).join("")}
   </tr></thead><tbody>`;
 
+  // 船行
   SHIP_SLOTS.forEach(slot=>{
-    const isFirst = SHIP_IS_FIRST.has(slot);
-    const label = SHIP_LABEL[slot];
-    const rowStyle = isFirst ? "row-ship" : "row-ship row-ship-sub";
-    const labelStyle = isFirst ? "" : 'style="color:var(--accent2);font-weight:500;font-size:11px"';
-    h+=`<tr class="${rowStyle}"><td ${labelStyle}>${label}</td>`;
+    const isFirst=SHIP_IS_FIRST.has(slot);
+    const label=SHIP_LABEL[slot];
+    h+=`<tr class="row-ship${isFirst?"":" row-ship-sub"}"><td>${label}</td>`;
     days.forEach(({d,dow})=>{
-      const val=getShip(m,slot,dd(d)), cls=dc(dow);
-      const ed=isEditor?`class="cell-ship ${cls} editable" onclick="App.openShipPopup('${m}','${slot}','${dd(d)}','${y}/${mo+1}/${d} ${label}')"`:`class="cell-ship ${cls}"`;
-      h+=`<td ${ed}><div class="cell-content">${esc(val)}</div></td>`;
+      const val=getShip(m,slot,dd(d));
+      const cls=dc(dow);
+      const bgStyle=val.color?`background:${val.color};`:"";
+      const ed=isEditor
+        ?`class="cell-ship ${cls} editable" style="${bgStyle}" onclick="App.openShipPopup('${m}','${slot}','${dd(d)}','${label} ${y}/${mo+1}/${d}')"`
+        :`class="cell-ship ${cls}" style="${bgStyle}"`;
+      h+=`<td ${ed}><div class="cell-content">${esc(val.text||"")}</div></td>`;
     });
     h+=`</tr>`;
   });
 
-  h+=`<tr><td class="th-label" style="font-size:10px;color:var(--text2);padding:4px 10px">乗組員</td>${days.map(()=>`<td style="background:var(--navy);height:6px;border-color:var(--accent)"></td>`).join("")}</tr>`;
+  // 区切り
+  h+=`<tr><td class="th-label" style="font-size:10px;padding:3px 10px;background:#e8ecf4;">乗組員</td>${days.map(()=>`<td style="background:#e8ecf4;height:5px;"></td>`).join("")}</tr>`;
 
+  // 乗組員行
   CREW.forEach(name=>{
     h+=`<tr class="row-crew"><td>${name}</td>`;
     days.forEach(({d,dow})=>{
-      const val=getCrew(m,name,dd(d)), cls=dc(dow);
-      // valは "休" or "進広丸" or "第八進広丸" or ""
-      const ship = (val!=="休") ? val : "";
-      const col = SHIP_COLORS[ship] || SHIP_COLORS[""];
-      const bgStyle = col.bg ? `background:${col.bg};` : "";
-      const borderStyle = col.border ? `outline:1px solid ${col.border};outline-offset:-1px;` : "";
-      const badge = val==="休"
-        ? `<span class="badge-off">休</span>`
-        : val ? `<span class="badge-ship" style="color:${col.text}">${esc(val)}</span>` : "";
-      const ed = isEditor
-        ? `class="cell-crew ${cls} editable" style="${bgStyle}${borderStyle}" onclick="App.openCrewPopup('${m}','${name}','${dd(d)}','${y}/${mo+1}/${d} ${name}')"`
-        : `class="cell-crew ${cls}" style="${bgStyle}${borderStyle}"`;
+      const val=getCrew(m,name,dd(d));
+      const cls=dc(dow);
+      const ship=val.ship||"";
+      const col=SHIP_COLORS[ship]||SHIP_COLORS[""];
+      const bgStyle=col.bg&&ship?`background:${col.bg};`:"";
+      let badge="";
+      if(ship==="休") badge=`<span class="badge-off">休</span>`;
+      else if(ship) badge=`<span class="badge-ship" style="background:${col.bg};color:${col.text};border-color:${col.border}">${esc(ship)}</span>`;
+      else if(val.note) badge=`<span style="font-size:10px;color:#6b7fa0">${esc(val.note)}</span>`;
+      const ed=isEditor
+        ?`class="cell-crew ${cls} editable" style="${bgStyle}" onclick="App.openCrewPopup('${m}','${name}','${dd(d)}','${y}/${mo+1}/${d} ${name}')"`
+        :`class="cell-crew ${cls}" style="${bgStyle}"`;
       h+=`<td ${ed}><div class="cell-crew-inner">${badge}</div></td>`;
     });
     h+=`</tr>`;
   });
+
   h+=`</tbody></table></div></div>`;
   return h;
 }
 
-// ======== APP ========
-const App = {
+// ======== POPUP ========
+function swatchesHtml(current){
+  return CELL_COLORS.map((c,i)=>{
+    const active=(current===c.bg)?" active":"";
+    const style=c.bg?`background:${c.bg};border-color:${c.text||"#ccc"}`:`background:#f0f2f6;border-color:#ccc`;
+    return `<div class="swatch${active}" style="${style}" title="${c.label}" onclick="selColor(${i})"></div>`;
+  }).join("");
+}
+
+const App={
   async init(){
     await handleCallback();
     if(token){ isEditor=true; this.showApp(); }
-    else { document.getElementById("loginPage").classList.remove("hidden"); }
+    else document.getElementById("loginPage").classList.remove("hidden");
   },
   login(){ startLogin(); },
-  viewOnly(){
-    isEditor=false;
-    document.getElementById("loginPage").classList.add("hidden");
-    this.showApp();
-  },
-  logout(){
-    token=null; isEditor=false;
-    sessionStorage.removeItem("shift_token");
-    this.updateAuthUI();
-    renderAll();
-  },
+  viewOnly(){ isEditor=false; document.getElementById("loginPage").classList.add("hidden"); this.showApp(); },
+  logout(){ token=null; isEditor=false; sessionStorage.removeItem("shift_token"); this.updateAuthUI(); renderAll(); },
   async showApp(){
     document.getElementById("loginPage").classList.add("hidden");
     document.getElementById("appPage").classList.remove("hidden");
     this.updateAuthUI();
-    if(isEditor){
-      document.getElementById("mainContent").innerHTML='<div class="loading"><div class="spinner"></div><span>データ読み込み中...</span></div>';
-      await loadData();
-    }
+    if(isEditor){ document.getElementById("mainContent").innerHTML='<div class="loading"><div class="spinner"></div><span>データ読み込み中...</span></div>'; await loadData(); }
     renderAll();
   },
   updateAuthUI(){
-    const dot=document.getElementById("authDot");
-    const lbl=document.getElementById("authLabel");
-    const lb=document.getElementById("loginBtn");
-    const lo=document.getElementById("logoutBtn");
-    if(isEditor){
-      dot.className="auth-dot online"; lbl.textContent="編集モード";
-      lb.classList.add("hidden"); lo.classList.remove("hidden");
-    } else {
-      dot.className="auth-dot"; lbl.textContent="閲覧モード";
-      lb.classList.remove("hidden"); lo.classList.add("hidden");
-    }
+    const dot=document.getElementById("authDot"),lbl=document.getElementById("authLabel");
+    const lb=document.getElementById("loginBtn"),lo=document.getElementById("logoutBtn");
+    if(isEditor){ dot.className="auth-dot online"; lbl.textContent="編集モード"; lb.classList.add("hidden"); lo.classList.remove("hidden"); }
+    else{ dot.className="auth-dot"; lbl.textContent="閲覧モード"; lb.classList.remove("hidden"); lo.classList.add("hidden"); }
   },
   prevMonth(){ currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1); renderAll(); },
   nextMonth(){ currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()+1,1); renderAll(); },
@@ -464,96 +433,117 @@ const App = {
     document.getElementById(v===1?"tab1":v===2?"tab2":"tabAll").classList.add("active");
     renderAll();
   },
-  openShipPopup(m,ship,d,title){
+
+  openShipPopup(m,slot,d,title){
     if(!isEditor) return;
-    popupCtx={type:"ship",m,ship,d};
-    const val=getShip(m,ship,d);
+    const val=getShip(m,slot,d);
+    popupCtx={type:"ship",m,slot,d};
     document.getElementById("popupTitle").textContent=`${title} ─ 作業内容`;
+    document.getElementById("popupDeleteBtn").style.display=(val.text||val.color)?"":"none";
     document.getElementById("popupBody").innerHTML=`
       <div class="popup-label">作業内容（改行可）</div>
-      <textarea class="popup-textarea" id="popupInput" rows="5" placeholder="例：深 下関→長府&#10;DB800t&#10;曳航作業">${val}</textarea>
-      <div class="popup-label" style="margin-top:10px">クイック入力</div>
+      <textarea class="popup-textarea" id="popupInput" rows="4" placeholder="例：深 下関→長府&#10;DB800t&#10;曳航作業">${(val.text||"").replace(/</g,"&lt;")}</textarea>
+      <div class="popup-label">クイック入力</div>
       <div class="popup-options">
         ${["曳航作業","揚投錨作業","機材輸送","補油","待機","日程要確認"].map(t=>`<div class="popup-opt" onclick="addQ('${t}')">${t}</div>`).join("")}
         <div class="popup-opt" onclick="clearQ()">クリア</div>
-      </div>`;
+      </div>
+      <div class="popup-label">セル背景色</div>
+      <div class="color-swatches" id="colorSwatches">${swatchesHtml(val.color||"")}</div>`;
     document.getElementById("popupOverlay").classList.remove("hidden");
     document.getElementById("popupInput").focus();
   },
+
   openCrewPopup(m,name,d,title){
     if(!isEditor) return;
-    popupCtx={type:"crew",m,name,d};
     const val=getCrew(m,name,d);
+    popupCtx={type:"crew",m,name,d};
     document.getElementById("popupTitle").textContent=`${title} ─ 乗船・勤怠`;
-    const ships=["進広丸","第八進広丸"];
-    const shipOpts=ships.map(s=>{
+    const hasData=val.ship||val.note;
+    document.getElementById("popupDeleteBtn").style.display=hasData?"":"none";
+    const shipOpts=SHIPS.map(s=>{
       const col=SHIP_COLORS[s];
-      const active=(val===s)?' active':'';
-      return `<div class="popup-opt crew-ship-opt${active}" data-ship="${s}" style="${active?'background:'+col.bg+';color:'+col.text+';border-color:'+col.border+';':''}" onclick="selCrewShip('${s}')">${s}</div>`;
+      const active=(val.ship===s);
+      return `<div class="popup-opt crew-ship-opt${active?" active":""}" data-ship="${s}" style="${active?`background:${col.bg};color:${col.text};border-color:${col.border}`:""}" onclick="selCrewShip('${s}')">${s}</div>`;
     }).join("");
     document.getElementById("popupBody").innerHTML=`
       <div class="popup-label">乗船する船を選択</div>
       <div class="popup-options" style="gap:8px;margin-top:6px">${shipOpts}</div>
-      <div class="popup-options" style="gap:8px;margin-top:8px">
-        <div class="popup-opt${val===''?' active':''}" id="opt-none" onclick="selCrewShip('')">未定</div>
-        <div class="popup-opt${val==='休'?' active':''}" id="opt-off" onclick="selCrewShip('休')">休暇</div>
+      <div class="popup-options" style="gap:8px;margin-top:6px">
+        <div class="popup-opt${val.ship===''&&!val.note?" active":""}" id="opt-none" onclick="selCrewShip('')">未定</div>
+        <div class="popup-opt${val.ship==="休"?" active":""}" id="opt-off" onclick="selCrewShip('休')">休暇</div>
       </div>
-      <div style="margin-top:12px">
-      <div class="popup-label">その他メモ（自由入力）</div>
-      <input type="text" class="popup-textarea" id="popupInput" style="height:36px;resize:none" placeholder="例：現場立会、小型船舶免許" value="">
-      </div>`;
+      <div class="popup-label">メモ（自由入力）</div>
+      <input type="text" class="popup-textarea" id="popupInput" style="height:34px;resize:none" placeholder="例：現場立会、小型船舶免許" value="${(val.note||"").replace(/"/g,"&quot;")}">`;
     document.getElementById("popupOverlay").classList.remove("hidden");
   },
+
   savePopup(){
     if(!popupCtx) return;
     if(popupCtx.type==="ship"){
-      setShip(popupCtx.m,popupCtx.ship,popupCtx.d,document.getElementById("popupInput").value.trim());
+      const text=document.getElementById("popupInput").value.trim();
+      const active=document.querySelector(".swatch.active");
+      const colorIdx=active?parseInt(active.dataset.idx||0):0;
+      const color=CELL_COLORS[colorIdx]?.bg||"";
+      setShip(popupCtx.m,popupCtx.slot,popupCtx.d,{text,color});
     } else {
       const sel=document.querySelector(".popup-opt.active");
-      const selId=sel?.id;
-      const selShip=sel?.dataset?.ship;
-      if(selId==="opt-off") setCrew(popupCtx.m,popupCtx.name,popupCtx.d,"休");
-      else if(selShip) setCrew(popupCtx.m,popupCtx.name,popupCtx.d,selShip);
-      else setCrew(popupCtx.m,popupCtx.name,popupCtx.d,document.getElementById("popupInput")?.value.trim()||"");
+      const ship=sel?.id==="opt-off"?"休":sel?.id==="opt-none"?"":sel?.dataset?.ship||"";
+      const note=document.getElementById("popupInput")?.value.trim()||"";
+      setCrew(popupCtx.m,popupCtx.name,popupCtx.d,{ship,note});
     }
     this.closePopup(); renderAll(); schedSave();
   },
+
+  deletePopup(){
+    if(!popupCtx) return;
+    if(popupCtx.type==="ship") setShip(popupCtx.m,popupCtx.slot,popupCtx.d,{text:"",color:""});
+    else setCrew(popupCtx.m,popupCtx.name,popupCtx.d,{ship:"",note:""});
+    this.closePopup(); renderAll(); schedSave();
+  },
+
   closePopup(){
     document.getElementById("popupOverlay").classList.add("hidden");
     popupCtx=null;
   }
 };
 
-function addQ(t){const i=document.getElementById("popupInput");i.value=i.value?(i.value+"\n"+t):t;i.focus();}
-function clearQ(){const i=document.getElementById("popupInput");if(i){i.value="";i.focus();}}
-function selCrewShip(v){
-  // 全選択解除
-  document.querySelectorAll(".popup-opt").forEach(e=>{
-    e.classList.remove("active");
-    if(e.classList.contains("crew-ship-opt")){
-      e.style.background=""; e.style.color=""; e.style.borderColor="";
-    }
+// 色スウォッチ選択
+function selColor(idx){
+  document.querySelectorAll(".swatch").forEach((el,i)=>{
+    el.dataset.idx=i;
+    el.classList.toggle("active",i===idx);
   });
-  if(v==="休"){
-    document.getElementById("opt-off")?.classList.add("active");
-  } else if(v===""){
-    document.getElementById("opt-none")?.classList.add("active");
-  } else {
-    const col=SHIP_COLORS[v];
-    const el=document.querySelector(`.crew-ship-opt[data-ship="${v}"]`);
-    if(el){
-      el.classList.add("active");
-      el.style.background=col.bg; el.style.color=col.text; el.style.borderColor=col.border;
-    }
-  }
-  const i=document.getElementById("popupInput");if(i)i.value="";
 }
-function showToast(msg){
-  const t=document.createElement("div");t.className="toast";t.textContent=msg;
-  document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
+// 初期化時にdata-idxをセット
+function initSwatchIdx(){
+  document.querySelectorAll(".swatch").forEach((el,i)=>el.dataset.idx=i);
 }
 
-document.getElementById("popupOverlay").addEventListener("click",function(e){if(e.target===this)App.closePopup();});
+function addQ(t){ const i=document.getElementById("popupInput"); i.value=i.value?(i.value+"\n"+t):t; i.focus(); }
+function clearQ(){ const i=document.getElementById("popupInput"); if(i){i.value="";i.focus();} }
+
+function selCrewShip(v){
+  document.querySelectorAll(".popup-opt").forEach(e=>{
+    e.classList.remove("active");
+    if(e.classList.contains("crew-ship-opt")){ e.style.background=""; e.style.color=""; e.style.borderColor=""; }
+  });
+  if(v==="休") document.getElementById("opt-off")?.classList.add("active");
+  else if(v==="") document.getElementById("opt-none")?.classList.add("active");
+  else {
+    const col=SHIP_COLORS[v];
+    const el=document.querySelector(`.crew-ship-opt[data-ship="${v}"]`);
+    if(el){ el.classList.add("active"); el.style.background=col.bg; el.style.color=col.text; el.style.borderColor=col.border; }
+  }
+}
+
+function showToast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3500); }
+
+document.getElementById("popupOverlay").addEventListener("click",function(e){ if(e.target===this) App.closePopup(); });
+
+// swatchesのidx初期化をMutationObserverで対応
+const observer=new MutationObserver(()=>{ document.querySelectorAll(".swatch:not([data-idx])").forEach((el,i)=>{ const all=[...document.querySelectorAll(".swatch")]; el.dataset.idx=all.indexOf(el); }); });
+observer.observe(document.getElementById("popupBody")||document.body,{childList:true,subtree:true});
 
 App.init();
 </script>
