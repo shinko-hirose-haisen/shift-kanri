@@ -380,7 +380,8 @@ const Drag = {
 
   click(e, el, type){
     if(this.moved){
-      // ドラッグ終了後のclickは無視（dragendで処理済み）
+      // ドラッグ終了後のclickは無視
+      this.moved=false;
       return;
     }
     // 通常クリック→個別ポップアップ
@@ -394,14 +395,14 @@ const Drag = {
     const el=e.target.closest ? e.target.closest("[data-type]") : null;
     if(!el||el.dataset.type!==this.type) return;
     this.moved=true;
-    // 同じ行（同じslot or 同じname）の範囲でのみ選択
     if(this.type==="ship"){
+      // 船：同じslot行内のみ
       if(el.dataset.slot!==this.startCell.dataset.slot) return;
+      this._buildRange(this.startCell, el);
     } else {
-      if(el.dataset.name!==this.startCell.dataset.name) return;
+      // 船員：行またぎOK（同じ月テーブル内の全crew行×日付範囲）
+      this._buildCrewRange(this.startCell, el);
     }
-    // 開始〜現在のセル範囲を選択
-    this._buildRange(this.startCell, el);
     this._updateBadge();
   },
 
@@ -411,7 +412,10 @@ const Drag = {
     this._removeBadge();
     if(this.moved && this.selected.length>1){
       App.openDragPopup(this.selected, this.type);
+    } else if(!this.moved){
+      // クリックのみ→movedはclickハンドラで処理
     }
+    // movedはclick側でリセット（clickがfireする前にendが来るため）
   },
 
   _addCell(el){
@@ -426,17 +430,33 @@ const Drag = {
   },
 
   _buildRange(startEl, endEl){
-    // 同じ行の全セルを取得して範囲内を選択
     const row=startEl.closest("tr");
     if(!row) return;
     const cells=[...row.querySelectorAll("[data-type]")];
     const si=cells.indexOf(startEl), ei=cells.indexOf(endEl);
     if(si<0||ei<0) return;
     const from=Math.min(si,ei), to=Math.max(si,ei);
-    // 既存ハイライトクリア
-    this._clearHighlight();
-    this.selected=[];
+    this._clearHighlight(); this.selected=[];
     cells.slice(from,to+1).forEach(c=>this._addCell(c));
+  },
+
+  _buildCrewRange(startEl, endEl){
+    // 開始・終了の日付インデックスを取得
+    const table=startEl.closest("table");
+    if(!table) return;
+    // 同じtableのcrew行を全取得
+    const allCrewCells=[...table.querySelectorAll("[data-type='crew']")];
+    // 開始・終了セルの列インデックス（data-dで判断）
+    const startD=startEl.dataset.d, endD=endEl.dataset.d, startM=startEl.dataset.m, endM=endEl.dataset.m;
+    // 日付を数値として比較（月をまたぐ場合もm+d文字列で比較）
+    const dateKey=(m,d)=>m+d;
+    const sk=dateKey(startM,startD), ek=dateKey(endM,endD);
+    const [fromKey,toKey]=[sk,ek].sort();
+    this._clearHighlight(); this.selected=[];
+    allCrewCells.forEach(c=>{
+      const ck=dateKey(c.dataset.m,c.dataset.d);
+      if(ck>=fromKey && ck<=toKey) this._addCell(c);
+    });
   },
 
   _clearHighlight(){
@@ -566,7 +586,7 @@ function renderMonth(md){
   });
 
   // 区切り
-  h+=`<tr><td class="th-label" style="font-size:10px;padding:3px 10px;background:#e8ecf4;">乗組員</td>${days.map(()=>`<td style="background:#e8ecf4;height:5px;"></td>`).join("")}</tr>`;
+  h+=`<tr><td class="th-label" style="font-size:10px;padding:3px 10px;background:#e8ecf4;">乗組員</td>${days.map(({d,dow})=>`<td style="background:#e8ecf4;text-align:center;font-size:11px;font-weight:700;padding:2px 0;color:${dow===0?"var(--sunday)":dow===6?"var(--saturday)":"var(--text2)"}">${d}</td>`).join("")}</tr>`;
 
   // 乗組員行
   CREW.forEach(name=>{
