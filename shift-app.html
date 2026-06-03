@@ -137,6 +137,20 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;right:20px;background:var(--header-bg);color:#fff;border-radius:8px;padding:10px 16px;font-size:12px;z-index:999;animation:fadeUp 0.3s ease;box-shadow:0 4px 16px rgba(0,0,0,0.2);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ドラッグ選択 */
+.cell-ship.drag-selected,.cell-crew.drag-selected{
+  outline:2px solid #1a6bb5!important;outline-offset:-2px;
+  filter:brightness(0.88);
+}
+.drag-count-badge{
+  position:fixed;top:80px;right:20px;
+  background:#1a2d45;color:#fff;
+  border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;
+  z-index:150;box-shadow:0 4px 16px rgba(0,0,0,0.25);
+  pointer-events:none;
+  animation:fadeUp 0.2s ease;
+}
 .hidden{display:none!important;}
 @media(max-width:600px){header{padding:8px 12px;}.main{padding:10px;}.controls{padding:7px 12px;gap:8px;}.header-sub{display:none;}.th-date,.cell-ship,.cell-crew{min-width:70px;width:70px;}}
 </style>
@@ -264,6 +278,22 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
   </div>
 </div>
 
+
+<!-- DRAG POPUP -->
+<div class="popup-overlay hidden" id="dragPopupOverlay">
+  <div class="popup-box" style="max-width:420px">
+    <div class="popup-title" id="dragPopupTitle">選択セルを一括編集</div>
+    <div id="dragPopupBody"></div>
+    <div class="popup-actions">
+      <button class="btn btn-danger" id="dragDeleteBtn" onclick="App.saveDragPopup('delete')">削除</button>
+      <div class="popup-actions-right">
+        <button class="btn btn-ghost" onclick="App.closeDragPopup()">キャンセル</button>
+        <button class="btn btn-success" onclick="App.saveDragPopup('save')">適用</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- POPUP -->
 <div class="popup-overlay hidden" id="popupOverlay">
   <div class="popup-box">
@@ -328,6 +358,110 @@ let currentView = 1;
 let data        = {};
 let saveTimer   = null;
 let popupCtx    = null;
+
+
+// ======== DRAG SELECT ========
+const Drag = {
+  dragging: false,
+  moved: false,
+  startCell: null,
+  selected: [],    // [{type,m,slot,name,d,el}]
+  type: null,      // "ship" or "crew"
+  badge: null,
+
+  start(e, el){
+    if(e.button!==0) return;
+    this.dragging=true; this.moved=false;
+    this.startCell=el; this.selected=[]; this.type=el.dataset.type;
+    this._addCell(el);
+    this._updateBadge();
+    e.preventDefault();
+  },
+
+  click(e, el, type){
+    if(this.moved){
+      // ドラッグ終了後のclickは無視（dragendで処理済み）
+      return;
+    }
+    // 通常クリック→個別ポップアップ
+    this.selected=[]; this._clearHighlight();
+    if(type==="ship") App.openShipPopup(el.dataset.m, el.dataset.slot, el.dataset.d, el.dataset.label);
+    else App.openCrewPopup(el.dataset.m, el.dataset.name, el.dataset.d, el.dataset.label);
+  },
+
+  over(e){
+    if(!this.dragging) return;
+    const el=e.target.closest ? e.target.closest("[data-type]") : null;
+    if(!el||el.dataset.type!==this.type) return;
+    this.moved=true;
+    // 同じ行（同じslot or 同じname）の範囲でのみ選択
+    if(this.type==="ship"){
+      if(el.dataset.slot!==this.startCell.dataset.slot) return;
+    } else {
+      if(el.dataset.name!==this.startCell.dataset.name) return;
+    }
+    // 開始〜現在のセル範囲を選択
+    this._buildRange(this.startCell, el);
+    this._updateBadge();
+  },
+
+  end(e){
+    if(!this.dragging) return;
+    this.dragging=false;
+    this._removeBadge();
+    if(this.moved && this.selected.length>1){
+      App.openDragPopup(this.selected, this.type);
+    }
+  },
+
+  _addCell(el){
+    const key=el.dataset.m+el.dataset.d+(el.dataset.slot||el.dataset.name);
+    if(!this.selected.find(s=>s.key===key)){
+      el.classList.add("drag-selected");
+      const obj={key,el,m:el.dataset.m,d:el.dataset.d};
+      if(this.type==="ship") obj.slot=el.dataset.slot;
+      else obj.name=el.dataset.name;
+      this.selected.push(obj);
+    }
+  },
+
+  _buildRange(startEl, endEl){
+    // 同じ行の全セルを取得して範囲内を選択
+    const row=startEl.closest("tr");
+    if(!row) return;
+    const cells=[...row.querySelectorAll("[data-type]")];
+    const si=cells.indexOf(startEl), ei=cells.indexOf(endEl);
+    if(si<0||ei<0) return;
+    const from=Math.min(si,ei), to=Math.max(si,ei);
+    // 既存ハイライトクリア
+    this._clearHighlight();
+    this.selected=[];
+    cells.slice(from,to+1).forEach(c=>this._addCell(c));
+  },
+
+  _clearHighlight(){
+    document.querySelectorAll(".drag-selected").forEach(el=>el.classList.remove("drag-selected"));
+  },
+
+  _updateBadge(){
+    if(!this.badge){ this.badge=document.createElement("div"); this.badge.className="drag-count-badge"; document.body.appendChild(this.badge); }
+    this.badge.textContent=`${this.selected.length}セル選択中`;
+  },
+
+  _removeBadge(){
+    if(this.badge){ this.badge.remove(); this.badge=null; }
+  },
+
+  clear(){
+    this._clearHighlight();
+    this._removeBadge();
+    this.selected=[]; this.dragging=false; this.moved=false;
+  }
+};
+
+document.addEventListener("mousemove", e=>Drag.over(e));
+document.addEventListener("mouseup",   e=>Drag.end(e));
+document.addEventListener("mouseleave",e=>{ if(Drag.dragging) Drag.end(e); });
 
 // ======== AUTH ========
 async function handleCallback(){
@@ -424,7 +558,7 @@ function renderMonth(md){
       const cls=dc(dow);
       const bgStyle=val.color?`background:${val.color};`:"";
       const ed=isEditor
-        ?`class="cell-ship ${cls} editable" style="${bgStyle}" onclick="App.openShipPopup('${m}','${slot}','${dd(d)}','${label} ${y}/${mo+1}/${d}')"`
+        ?`class="cell-ship ${cls} editable" data-type="ship" data-m="${m}" data-slot="${slot}" data-d="${dd(d)}" data-label="${label} ${y}/${mo+1}/${d}" style="${bgStyle}" onmousedown="Drag.start(event,this)" onclick="Drag.click(event,this,'ship')"`
         :`class="cell-ship ${cls}" style="${bgStyle}"`;
       h+=`<td ${ed}><div class="cell-content">${esc(val.text||"")}</div></td>`;
     });
@@ -448,7 +582,7 @@ function renderMonth(md){
       else if(ship) badge=`<span class="badge-ship" style="background:${col.bg};color:${col.text};border-color:${col.border}">${esc(ship)}</span>`;
       else if(val.note) badge=`<span style="font-size:10px;color:#6b7fa0">${esc(val.note)}</span>`;
       const ed=isEditor
-        ?`class="cell-crew ${cls} editable" style="${bgStyle}" onclick="App.openCrewPopup('${m}','${name}','${dd(d)}','${y}/${mo+1}/${d} ${name}')"`
+        ?`class="cell-crew ${cls} editable" data-type="crew" data-m="${m}" data-name="${name}" data-d="${dd(d)}" data-label="${y}/${mo+1}/${d} ${name}" style="${bgStyle}" onmousedown="Drag.start(event,this)" onclick="Drag.click(event,this,'crew')"`
         :`class="cell-crew ${cls}" style="${bgStyle}"`;
       h+=`<td ${ed}><div class="cell-crew-inner">${badge}</div></td>`;
     });
@@ -497,6 +631,73 @@ const App={
     ["tab1","tab2","tabAll"].forEach(id=>document.getElementById(id).classList.remove("active"));
     document.getElementById(v===1?"tab1":v===2?"tab2":"tabAll").classList.add("active");
     renderAll();
+  },
+
+
+  openDragPopup(selected, type){
+    document.getElementById("dragPopupTitle").textContent=`${selected.length}セルを一括編集`;
+    if(type==="ship"){
+      document.getElementById("dragPopupBody").innerHTML=`
+        <div class="popup-label">セル背景色</div>
+        <div class="color-swatches" id="dragSwatches">
+          ${CELL_COLORS.map((c,i)=>{
+            const style=c.bg?`background:${c.bg};border-color:${c.text||"#ccc"}`:`background:#f0f2f6;border-color:#ccc`;
+            return `<div class="swatch${i===0?" active":""}" data-idx="${i}" style="${style}" title="${c.label}" onclick="selDragColor(${i})"></div>`;
+          }).join("")}
+        </div>
+        <div style="font-size:11px;color:#6b7fa0;margin-top:10px">※テキストは変更されません</div>`;
+      document.getElementById("dragDeleteBtn").style.display="";
+    } else {
+      const shipOpts=SHIPS.map(s=>{
+        const col=SHIP_COLORS[s];
+        return `<div class="popup-opt crew-ship-opt" data-ship="${s}" style="" onclick="selDragCrew(this)">${s}</div>`;
+      }).join("");
+      document.getElementById("dragPopupBody").innerHTML=`
+        <div class="popup-label">乗船する船を選択</div>
+        <div class="popup-options" style="gap:8px;margin-top:6px">${shipOpts}</div>
+        <div class="popup-options" style="gap:8px;margin-top:6px">
+          <div class="popup-opt active" id="drag-opt-none" data-ship="" onclick="selDragCrew(this)">未定</div>
+          <div class="popup-opt" id="drag-opt-off" data-ship="休" onclick="selDragCrew(this)">休暇</div>
+        </div>`;
+      document.getElementById("dragDeleteBtn").style.display="none";
+    }
+    document.getElementById("dragPopupOverlay").classList.remove("hidden");
+  },
+
+  saveDragPopup(action){
+    const selected=Drag.selected;
+    const type=Drag.type;
+    if(action==="delete"){
+      selected.forEach(s=>{
+        if(type==="ship") setShip(s.m,s.slot,s.d,{text:"",color:""});
+        else setCrew(s.m,s.name,s.d,{ship:"",note:""});
+      });
+    } else {
+      if(type==="ship"){
+        const activeS=document.querySelector("#dragSwatches .swatch.active");
+        const color=CELL_COLORS[parseInt(activeS?.dataset.idx||0)]?.bg||"";
+        selected.forEach(s=>{
+          const existing=getShip(s.m,s.slot,s.d);
+          setShip(s.m,s.slot,s.d,{text:existing.text||"",color});
+        });
+      } else {
+        const sel=document.querySelector("#dragPopupBody .popup-opt.active");
+        const ship=sel?.dataset.ship??"";
+        selected.forEach(s=>{
+          const existing=getCrew(s.m,s.name,s.d);
+          setCrew(s.m,s.name,s.d,{ship,note:existing.note||""});
+        });
+      }
+    }
+    this.closeDragPopup();
+    renderAll();
+    schedSave();
+    showToast(`${selected.length}セルを更新しました`);
+  },
+
+  closeDragPopup(){
+    document.getElementById("dragPopupOverlay").classList.add("hidden");
+    Drag.clear();
   },
 
   openShipPopup(m,slot,d,title){
@@ -708,10 +909,27 @@ function selBulkColor(idx){
   document.querySelectorAll("#bulkSwatches .swatch").forEach((el,i)=>el.classList.toggle("active",i===idx));
 }
 
+function selDragColor(idx){
+  document.querySelectorAll("#dragSwatches .swatch").forEach((el,i)=>el.classList.toggle("active",i===idx));
+}
+function selDragCrew(el){
+  document.querySelectorAll("#dragPopupBody .popup-opt").forEach(e=>{
+    e.classList.remove("active");
+    if(e.classList.contains("crew-ship-opt")){ e.style.background=""; e.style.color=""; e.style.borderColor=""; }
+  });
+  el.classList.add("active");
+  const ship=el.dataset.ship;
+  if(ship&&SHIP_COLORS[ship]){
+    const col=SHIP_COLORS[ship];
+    el.style.background=col.bg; el.style.color=col.text; el.style.borderColor=col.border;
+  }
+}
+
 function showToast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3500); }
 
 document.getElementById("popupOverlay").addEventListener("click",function(e){ if(e.target===this) App.closePopup(); });
 document.getElementById("bulkPopupOverlay").addEventListener("click",function(e){ if(e.target===this) App.closeBulkPopup(); });
+document.getElementById("dragPopupOverlay").addEventListener("click",function(e){ if(e.target===this) App.closeDragPopup(); });
 
 // swatchesのidx初期化をMutationObserverで対応
 const observer=new MutationObserver(()=>{ document.querySelectorAll(".swatch:not([data-idx])").forEach((el,i)=>{ const all=[...document.querySelectorAll(".swatch")]; el.dataset.idx=all.indexOf(el); }); });
