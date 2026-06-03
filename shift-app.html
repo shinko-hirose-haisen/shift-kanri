@@ -45,7 +45,7 @@ header{background:var(--hbg);padding:10px 20px;display:flex;align-items:center;j
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 .main{padding:16px 20px;}
 .stable-wrap-outer{margin-bottom:20px;position:relative;}
-.stable-wrap{overflow-x:scroll;background:#fff;border-radius:8px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,0.07);}
+.stable-wrap{overflow-x:scroll;background:#fff;border-radius:8px;border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,0.07);padding-right:40px;}
 /* 固定スクロールバー */
 .fixed-scroll{position:fixed;bottom:0;left:0;right:0;height:14px;overflow-x:scroll;overflow-y:hidden;z-index:90;background:#e8ecf4;border-top:1px solid var(--border);}
 .fixed-scroll-inner{height:1px;}
@@ -629,11 +629,29 @@ function onCellMD(e,el){
   dragSel=[]; dragType=dgType;
   clearDragHighlight();
 }
+let autoScrollTimer=null;
+function stopAutoScroll(){clearInterval(autoScrollTimer);autoScrollTimer=null;}
+function startAutoScroll(sw,dir){
+  stopAutoScroll();
+  autoScrollTimer=setInterval(()=>{ sw.scrollLeft+=dir*18; },30);
+}
+
 function onDocMM(e){
   if(!dgActive) return;
   const dx=Math.abs(e.clientX-dgStartX),dy=Math.abs(e.clientY-dgStartY);
   if(dx<6&&dy<6) return;
   dgMoved=true;
+
+  // ドラッグ中の自動横スクロール
+  const sw=dgStartCell.closest(".stable-wrap");
+  if(sw){
+    const rect=sw.getBoundingClientRect();
+    const edge=60; // px
+    if(e.clientX>rect.right-edge) startAutoScroll(sw,1);
+    else if(e.clientX<rect.left+edge) startAutoScroll(sw,-1);
+    else stopAutoScroll();
+  }
+
   const under=document.elementFromPoint(e.clientX,e.clientY);
   const cell=under?.closest("[data-type]");
   if(!cell||cell.dataset.type!==dgType) return;
@@ -648,6 +666,7 @@ function onDocMM(e){
 function onDocMU(e){
   if(!dgActive) return;
   dgActive=false;
+  stopAutoScroll();
   removeDragBadge();
   if(!dgMoved){
     // クリック → 個別ポップアップ
