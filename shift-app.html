@@ -189,6 +189,7 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
       <div class="tab" id="tab2" onclick="App.setView(2)">来月</div>
       <div class="tab" id="tabAll" onclick="App.setView(0)">両月</div>
     </div>
+    <button class="btn btn-ghost hidden" id="bulkColorBtn" onclick="App.openBulkPopup()" style="font-size:11px">🎨 一括色変更</button>
     <div class="save-status">
       <div class="save-dot" id="saveDot"></div>
       <span id="saveLabel">保存済み</span>
@@ -196,6 +197,42 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
   </div>
   <div class="main" id="mainContent">
     <div class="loading"><div class="spinner"></div><span>読み込み中...</span></div>
+  </div>
+</div>
+
+
+<!-- BULK COLOR POPUP -->
+<div class="popup-overlay hidden" id="bulkPopupOverlay">
+  <div class="popup-box" style="max-width:480px">
+    <div class="popup-title">📅 一括色変更</div>
+    <div id="bulkPopupBody">
+      <div class="popup-label">対象の船</div>
+      <div class="popup-options" style="gap:6px;margin-top:6px" id="bulkSlotOpts">
+        <div class="popup-opt active" data-slot="進広丸_1" onclick="toggleBulkSlot(this)">進広丸 ①</div>
+        <div class="popup-opt" data-slot="進広丸_2" onclick="toggleBulkSlot(this)">進広丸 ②</div>
+        <div class="popup-opt" data-slot="第八進広丸_1" onclick="toggleBulkSlot(this)">第八進広丸 ①</div>
+        <div class="popup-opt" data-slot="第八進広丸_2" onclick="toggleBulkSlot(this)">第八進広丸 ②</div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <div class="popup-label">開始日</div>
+          <input type="date" class="popup-textarea" id="bulkStart" style="height:34px;resize:none">
+        </div>
+        <div style="flex:1;min-width:140px">
+          <div class="popup-label">終了日</div>
+          <input type="date" class="popup-textarea" id="bulkEnd" style="height:34px;resize:none">
+        </div>
+      </div>
+      <div class="popup-label">適用する色</div>
+      <div class="color-swatches" id="bulkSwatches"></div>
+    </div>
+    <div class="popup-actions">
+      <div></div>
+      <div class="popup-actions-right">
+        <button class="btn btn-ghost" onclick="App.closeBulkPopup()">キャンセル</button>
+        <button class="btn btn-success" onclick="App.saveBulkColor()">一括適用</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -422,8 +459,8 @@ const App={
   updateAuthUI(){
     const dot=document.getElementById("authDot"),lbl=document.getElementById("authLabel");
     const lb=document.getElementById("loginBtn"),lo=document.getElementById("logoutBtn");
-    if(isEditor){ dot.className="auth-dot online"; lbl.textContent="編集モード"; lb.classList.add("hidden"); lo.classList.remove("hidden"); }
-    else{ dot.className="auth-dot"; lbl.textContent="閲覧モード"; lb.classList.remove("hidden"); lo.classList.add("hidden"); }
+    if(isEditor){ dot.className="auth-dot online"; lbl.textContent="編集モード"; lb.classList.add("hidden"); lo.classList.remove("hidden"); document.getElementById("bulkColorBtn")?.classList.remove("hidden"); }
+    else{ dot.className="auth-dot"; lbl.textContent="閲覧モード"; lb.classList.remove("hidden"); lo.classList.add("hidden"); document.getElementById("bulkColorBtn")?.classList.add("hidden"); }
   },
   prevMonth(){ currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1); renderAll(); },
   nextMonth(){ currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()+1,1); renderAll(); },
@@ -502,6 +539,56 @@ const App={
     this.closePopup(); renderAll(); schedSave();
   },
 
+
+  openBulkPopup(){
+    if(!isEditor) return;
+    // 今月の初日をデフォルトに
+    const base=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+    const last=new Date(base.getFullYear(),base.getMonth()+1,0);
+    const fmt=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    document.getElementById("bulkStart").value=fmt(base);
+    document.getElementById("bulkEnd").value=fmt(last);
+    // スウォッチ生成
+    document.getElementById("bulkSwatches").innerHTML=CELL_COLORS.map((c,i)=>{
+      const style=c.bg?`background:${c.bg};border-color:${c.text||"#ccc"}`:`background:#f0f2f6;border-color:#ccc`;
+      return `<div class="swatch${i===0?" active":""}" data-idx="${i}" style="${style}" title="${c.label}" onclick="selBulkColor(${i})"></div>`;
+    }).join("");
+    document.getElementById("bulkPopupOverlay").classList.remove("hidden");
+  },
+  closeBulkPopup(){
+    document.getElementById("bulkPopupOverlay").classList.add("hidden");
+  },
+  saveBulkColor(){
+    const startVal=document.getElementById("bulkStart").value;
+    const endVal=document.getElementById("bulkEnd").value;
+    if(!startVal||!endVal){ showToast("開始日・終了日を入力してください"); return; }
+    const start=new Date(startVal), end=new Date(endVal);
+    if(start>end){ showToast("開始日が終了日より後になっています"); return; }
+    // 選択スロット
+    const slots=[...document.querySelectorAll("#bulkSlotOpts .popup-opt.active")].map(e=>e.dataset.slot);
+    if(slots.length===0){ showToast("対象の船を選択してください"); return; }
+    // 選択色
+    const activeS=document.querySelector("#bulkSwatches .swatch.active");
+    const colorIdx=activeS?parseInt(activeS.dataset.idx):0;
+    const color=CELL_COLORS[colorIdx]?.bg||"";
+    // 適用
+    let count=0;
+    const cur=new Date(start);
+    while(cur<=end){
+      const m=mk(cur);
+      const dd=String(cur.getDate()).padStart(2,"0");
+      slots.forEach(slot=>{
+        const existing=getShip(m,slot,dd);
+        setShip(m,slot,dd,{text:existing.text||"",color});
+        count++;
+      });
+      cur.setDate(cur.getDate()+1);
+    }
+    this.closeBulkPopup();
+    renderAll();
+    schedSave();
+    showToast(`${count}セルに色を適用しました`);
+  },
   closePopup(){
     document.getElementById("popupOverlay").classList.add("hidden");
     popupCtx=null;
@@ -537,9 +624,18 @@ function selCrewShip(v){
   }
 }
 
+
+function toggleBulkSlot(el){
+  el.classList.toggle("active");
+}
+function selBulkColor(idx){
+  document.querySelectorAll("#bulkSwatches .swatch").forEach((el,i)=>el.classList.toggle("active",i===idx));
+}
+
 function showToast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3500); }
 
 document.getElementById("popupOverlay").addEventListener("click",function(e){ if(e.target===this) App.closePopup(); });
+document.getElementById("bulkPopupOverlay").addEventListener("click",function(e){ if(e.target===this) App.closeBulkPopup(); });
 
 // swatchesのidx初期化をMutationObserverで対応
 const observer=new MutationObserver(()=>{ document.querySelectorAll(".swatch:not([data-idx])").forEach((el,i)=>{ const all=[...document.querySelectorAll(".swatch")]; el.dataset.idx=all.indexOf(el); }); });
