@@ -133,11 +133,12 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
     <div style="font-size:13px;color:var(--text2);margin-bottom:26px">進光海運有限会社</div>
     <button class="login-btn-main" onclick="App.viewOnly()">📅　作業・休暇予定表を見る</button>
     <div class="ldiv">編集する場合</div>
-    <button class="ledit" onclick="App.login()">
-      <svg width="14" height="14" viewBox="0 0 21 21" fill="currentColor"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
-      Microsoftアカウントでログイン
-    </button>
-    <div style="font-size:11px;color:var(--text3);margin-top:10px">データはクラウドに保存されます</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <input type="password" id="pwInput" class="ptxt" style="height:38px;flex:1" placeholder="パスワードを入力"
+        onkeydown="if(event.key==='Enter')App.login()">
+      <button class="btn-p btn" onclick="App.login()">ログイン</button>
+    </div>
+    <div id="pwError" style="font-size:11px;color:#e53935;min-height:16px"></div>
   </div>
 </div>
 
@@ -150,7 +151,6 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
     </div>
     <div class="hr">
       <div class="astat"><div class="adot" id="adot"></div><span id="albl">閲覧モード</span></div>
-      <button class="btn btn-gw hidden" id="loginBtn" onclick="App.login()">ログイン</button>
       <button class="btn btn-gw hidden" id="logoutBtn" onclick="App.logout()">ログアウト</button>
     </div>
   </header>
@@ -309,21 +309,14 @@ th,td{border:1px solid var(--border);padding:0;vertical-align:top;}
 </div>
 <script>
 // ===== CONFIG =====
-const CLIENT_ID   = "31411124-c9a3-4c1a-b357-343c1650b98c";
-const TENANT_ID   = "shinko1.onmicrosoft.com";
-const SCOPES      = ["https://graph.microsoft.com/User.Read"];
-const REDIR       = location.href.split("?")[0].split("#")[0];
 // Supabase
 const SB_URL  = "https://urjmgvikvfktwhrsnnva.supabase.co";
 const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVyam1ndmlrdmZrdHdocnNubnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzMxMjAsImV4cCI6MjA5NjA0OTEyMH0.Uz2ueK7QlksNsi6CyXJKz29KKDZd-iSGZq3tQxQOZg8";
 
-// ===== PKCE =====
-function b64u(b){return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");}
-async function mkV(){return b64u(crypto.getRandomValues(new Uint8Array(32)));}
-async function mkC(v){return b64u(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)));}
+
 
 // ===== VERSION =====
-const VERSION = 'v1.5.0';
+const VERSION = 'v1.6.0';
 
 // ===== CONSTANTS (動的) =====
 const DOW=["日","月","火","水","木","金","土"];
@@ -364,7 +357,7 @@ const CCOLS=[
 const QITEMS=["曳航作業","揚投錨作業","機材輸送","補油","待機","日程要確認"];
 
 // ===== STATE =====
-let token=sessionStorage.getItem("shift_token")||null;
+let isAuthenticated=sessionStorage.getItem("shift_auth")==="1";
 let isEd=false;
 let curDate=new Date();
 let curView=1;
@@ -379,23 +372,11 @@ let dragType=null;
 let dragBadge=null;
 
 // ===== AUTH =====
-async function handleCB(){
-  const p=new URLSearchParams(location.search);
-  const code=p.get("code"); if(!code) return;
-  history.replaceState({},"",location.pathname);
-  const v=sessionStorage.getItem("pkce_v"); if(!v){toast("認証エラー");return;}
-  const body=new URLSearchParams({client_id:CLIENT_ID,grant_type:"authorization_code",code,redirect_uri:REDIR,code_verifier:v,scope:SCOPES.join(" ")});
-  try{
-    const r=await fetch(`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body});
-    const j=await r.json();
-    if(j.access_token){token=j.access_token;sessionStorage.setItem("shift_token",token);sessionStorage.removeItem("pkce_v");isEd=true;}
-    else toast("ログイン失敗: "+(j.error_description||j.error));
-  }catch(e){toast("通信エラー: "+e.message);}
-}
-async function doLogin(){
-  const v=await mkV(),c=await mkC(v);
-  sessionStorage.setItem("pkce_v",v);
-  location.href=`https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/authorize?`+new URLSearchParams({client_id:CLIENT_ID,response_type:"code",redirect_uri:REDIR,scope:SCOPES.join(" "),code_challenge:c,code_challenge_method:"S256",response_mode:"query"});
+// パスワードをSHA-256でハッシュして比較
+const PW_HASH = "f2c5571ef87f0e2218abe9e3b7a5bb2b62e81f25feaab9c06ebee84c87b26e5f"; // 8835441
+async function hashPw(pw){
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
 // ===== SUPABASE =====
@@ -791,11 +772,24 @@ function selBulkCrew(el){
 // ===== APP OBJECT =====
 const App={
   async init(){
-    await handleCB();
-    if(token){isEd=true;this.showApp();}
+    if(isAuthenticated){isEd=true;this.showApp();}
     else document.getElementById("loginPg").classList.remove("hidden");
   },
-  login(){doLogin();},
+  async login(){
+    const pw=document.getElementById("pwInput")?.value||"";
+    const hash=await hashPw(pw);
+    if(hash===PW_HASH){
+      sessionStorage.setItem("shift_auth","1");
+      isAuthenticated=true; isEd=true;
+      document.getElementById("pwError").textContent="";
+      document.getElementById("loginPg").classList.add("hidden");
+      this.showApp();
+    } else {
+      document.getElementById("pwError").textContent="パスワードが違います";
+      document.getElementById("pwInput").value="";
+      document.getElementById("pwInput").focus();
+    }
+  },
   viewOnly(){isEd=false;document.getElementById("loginPg").classList.add("hidden");this.showApp();},
   logout(){token=null;isEd=false;sessionStorage.removeItem("shift_token");this.updateUI();renderAll();},
   async showApp(){
@@ -819,8 +813,8 @@ const App={
     const dot=document.getElementById("adot"),lbl=document.getElementById("albl");
     const lb=document.getElementById("loginBtn"),lo=document.getElementById("logoutBtn"),bb=document.getElementById("bulkBtn");
     const sb=document.getElementById("settingsBtn");
-    if(isEd){dot.className="adot on";lbl.textContent="編集モード";lb.classList.add("hidden");lo.classList.remove("hidden");bb.classList.remove("hidden");sb?.classList.remove("hidden");}
-    else{dot.className="adot";lbl.textContent="閲覧モード";lb.classList.remove("hidden");lo.classList.add("hidden");bb.classList.add("hidden");document.getElementById("settingsBtn")?.classList.add("hidden");}
+    if(isEd){dot.className="adot on";lbl.textContent="編集モード";lo.classList.remove("hidden");bb.classList.remove("hidden");sb?.classList.remove("hidden");}
+    else{dot.className="adot";lbl.textContent="閲覧モード";lo.classList.add("hidden");bb.classList.add("hidden");document.getElementById("settingsBtn")?.classList.add("hidden");}
   },
 
   // 設定
