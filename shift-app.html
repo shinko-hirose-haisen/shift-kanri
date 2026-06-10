@@ -373,7 +373,7 @@ let dragBadge=null;
 
 // ===== AUTH =====
 // パスワードをSHA-256でハッシュして比較
-const PW_HASH = "f2c5571ef87f0e2218abe9e3b7a5bb2b62e81f25feaab9c06ebee84c87b26e5f"; // 8835441
+const PW_HASH = "8b955ccb74d7f3cf66c073f1fb7246b5768c8248bf68da4c62cf6a30388682a9"; // 8835441
 async function hashPw(pw){
   const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(pw));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
